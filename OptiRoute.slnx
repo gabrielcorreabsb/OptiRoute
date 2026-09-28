@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OptiRoute.App/OptiRoute.App.csproj" />
+    <Project Path="src/OptiRoute.Core/OptiRoute.Core.csproj" />
+    <Project Path="src/OptiRoute.OPNsense/OptiRoute.OPNsense.csproj" />
+    <Project Path="src/OptiRoute.Poc/OptiRoute.Poc.csproj" />
+    <Project Path="src/OptiRoute.Windows/OptiRoute.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OptiRoute.Core.Tests/OptiRoute.Core.Tests.csproj" />
+    <Project Path="tests/OptiRoute.Windows.Tests/OptiRoute.Windows.Tests.csproj" />
+  </Folder>
+</Solution>

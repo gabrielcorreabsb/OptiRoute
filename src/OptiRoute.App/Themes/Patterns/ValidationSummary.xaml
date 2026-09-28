@@ -1,0 +1,32 @@
+<UserControl x:Class="OptiRoute.App.Themes.Patterns.ValidationSummary"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             mc:Ignorable="d"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             d:DesignHeight="100" d:DesignWidth="400">
+    <!--
+        ValidationSummary: ErrorBox header + bullet list.
+        Bind ValidationErrors (ObservableCollection<string>) and HasErrors (bool).
+        When HasErrors=false, the whole panel collapses.
+    -->
+    <Border Style="{StaticResource Styles.ErrorBox}"
+            Visibility="{Binding HasErrors, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}">
+        <StackPanel>
+            <TextBlock Text="Please fix the following errors:"
+                       FontWeight="SemiBold"
+                       Foreground="{StaticResource Tokens.Semantic.Error}"
+                       Margin="0,0,0,8"/>
+            <ItemsControl ItemsSource="{Binding ValidationErrors, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{StaticResource Tokens.Text.Secondary}"
+                                   Margin="0,2,0,0"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </Border>
+</UserControl>

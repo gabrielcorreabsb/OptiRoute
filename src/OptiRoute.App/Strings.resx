@@ -1,0 +1,484 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       MainWindow.xaml — header, footer, empty state
+       Resource key pattern: <Scope>.<Screen>.<Element>[.<Qualifier>]
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="MainWindow.Title" xml:space="preserve">
+    <value>OptiRoute — Multi-PC WAN Router</value>
+  </data>
+  <data name="MainWindow.BrandName" xml:space="preserve">
+    <value>⚡ OptiRoute</value>
+  </data>
+  <data name="MainWindow.ArchitectureBadge" xml:space="preserve">
+    <value>Multi-PC Architecture</value>
+  </data>
+  <data name="MainWindow.OpnsenseLabel" xml:space="preserve">
+    <value>OPNsense:</value>
+  </data>
+  <data name="MainWindow.ThisComputerLabel" xml:space="preserve">
+    <value>This Computer:</value>
+  </data>
+  <data name="MainWindow.RefreshButton" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="MainWindow.ApplyRepairButton" xml:space="preserve">
+    <value>✓ Apply changes</value>
+  </data>
+  <data name="MainWindow.RefreshButton.ToolTip" xml:space="preserve">
+    <value>Read OPNsense + Windows QoS, build repair plan (does not mutate)</value>
+  </data>
+  <data name="MainWindow.ApplyRepairButton.ToolTip" xml:space="preserve">
+    <value>Apply the plan built by Refresh (only enabled when there are pending actions)</value>
+  </data>
+  <data name="MainWindow.NotConnectedState.Action" xml:space="preserve">
+    <value>Open Settings</value>
+  </data>
+  <data name="MainWindow.SettingsButtonToolTip" xml:space="preserve">
+    <value>Open OptiRoute settings (connection, credentials, gateways, advanced)</value>
+  </data>
+  <data name="Card.GlobalOnly.Hint" xml:space="preserve">
+    <value>→ Apply via '✓ Apply changes' on the top bar.</value>
+  </data>
+  <data name="Card.Conflict.Hint" xml:space="preserve">
+    <value>→ Apply via '✓ Apply changes' on the top bar.</value>
+  </data>
+  <data name="MainWindow.AddApplicationButton" xml:space="preserve">
+    <value>+ Add Application</value>
+  </data>
+  <data name="MainWindow.GatewaysLabel" xml:space="preserve">
+    <value>Active Gateways:</value>
+  </data>
+  <data name="MainWindow.EmptyState.Title" xml:space="preserve">
+    <value>No managed applications yet</value>
+  </data>
+  <data name="MainWindow.EmptyState.Subtitle" xml:space="preserve">
+    <value>Click the button below to add a game or executable to OptiRoute.</value>
+  </data>
+  <data name="MainWindow.EmptyState.AddButton" xml:space="preserve">
+    <value>+ Add Application</value>
+  </data>
+  <data name="MainWindow.VersionFooter" xml:space="preserve">
+    <value>OptiRoute v2.0 (Multi-PC)</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Card panels — Synchronized state
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Card.GlobalDefaultLabel" xml:space="preserve">
+    <value>Global default:</value>
+  </data>
+  <data name="Card.DefaultRoutingLabel" xml:space="preserve">
+    <value>Default for the whole network</value>
+  </data>
+  <data name="Card.ThisComputerCardLabel" xml:space="preserve">
+    <value>This Computer:</value>
+  </data>
+  <data name="Card.FollowGlobalRadio" xml:space="preserve">
+    <value>Follow Global</value>
+  </data>
+  <data name="Card.LocalOverrideRadio" xml:space="preserve">
+    <value>Local override:</value>
+  </data>
+  <data name="Card.OverrideDescription" xml:space="preserve">
+    <value>Change the WAN exclusively for this computer</value>
+  </data>
+  <data name="Card.EffectiveRouteLabel" xml:space="preserve">
+    <value>Effective Route:</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Card panels — LocalOnly state
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Card.LocalOnly.Title" xml:space="preserve">
+    <value>⚠ Policy exists only in this Windows</value>
+  </data>
+  <data name="Card.LocalOnly.Subtitle" xml:space="preserve">
+    <value>This application has no global rule registered in OPNsense.</value>
+  </data>
+  <data name="Card.LocalOnly.RegisterButton" xml:space="preserve">
+    <value>+ Register in OPNsense</value>
+  </data>
+  <data name="Card.LocalOnly.RemoveButton" xml:space="preserve">
+    <value>Remove from Windows</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Card panels — GlobalOnly state
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Card.GlobalOnly.Title" xml:space="preserve">
+    <value>○ Available in OPNsense</value>
+  </data>
+  <data name="Card.GlobalOnly.Subtitle" xml:space="preserve">
+    <value>QoS not yet configured for this game on this computer.</value>
+  </data>
+  <data name="Card.GlobalOnly.ActivateButton" xml:space="preserve">
+    <value>Activate on This PC</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Card panels — Out-of-sync (conflict) state
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Card.Conflict.Title" xml:space="preserve">
+    <value>⚠ DSCP mismatch detected</value>
+  </data>
+  <data name="Card.Conflict.Subtitle" xml:space="preserve">
+    <value>The local Windows DSCP differs from the global DSCP registered in OPNsense.</value>
+  </data>
+  <data name="Card.Conflict.RepairButton" xml:space="preserve">
+    <value>Fix to Global DSCP</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Card panels — common (delete tooltip, badge, etc.)
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Card.DeleteButton.ToolTip" xml:space="preserve">
+    <value>Delete application</value>
+  </data>
+  <data name="Card.DscpBadge" xml:space="preserve">
+    <value>DSCP {0}</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       InvalidTosDialog.xaml — modal for TOS/description corruption
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Dialog.InvalidTos.Title" xml:space="preserve">
+    <value>Invalid OPNsense rule detected</value>
+  </data>
+  <data name="Dialog.InvalidTos.DescriptionLabel" xml:space="preserve">
+    <value>description says:</value>
+  </data>
+  <data name="Dialog.InvalidTos.ActualTosLabel" xml:space="preserve">
+    <value>actual tos says:</value>
+  </data>
+  <data name="Dialog.InvalidTos.CancelButton" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Dialog.InvalidTos.ForceWindowsButton" xml:space="preserve">
+    <value>Use Windows DSCP (recreate OPNsense rule with tos=localDscp&lt;&lt;2)</value>
+  </data>
+  <data name="Dialog.InvalidTos.ForceOpnsenseButton" xml:space="preserve">
+    <value>Use OPNsense tos (update Windows + description to tos/4)</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Common (cancel, save, close, loading, …)
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Common.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Common.Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Common.Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Common.Loading" xml:space="preserve">
+    <value>Loading…</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Settings window — Connection tab
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Settings.WindowTitle" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Settings.Tab.Connection" xml:space="preserve">
+    <value>Connection</value>
+  </data>
+  <data name="Settings.Connection.OpnsenseAddress" xml:space="preserve">
+    <value>OPNsense address</value>
+  </data>
+  <data name="Settings.Connection.OpnsenseAddress.Placeholder" xml:space="preserve">
+    <value>https://10.0.0.1</value>
+  </data>
+  <data name="Settings.Connection.LocalComputer" xml:space="preserve">
+    <value>Local computer</value>
+  </data>
+  <data name="Settings.Connection.DetectIpButton" xml:space="preserve">
+    <value>Detect again</value>
+  </data>
+  <data name="Settings.Connection.PreferredIp" xml:space="preserve">
+    <value>IPv4 (override):</value>
+  </data>
+  <data name="Settings.Connection.TestButton" xml:space="preserve">
+    <value>Test connection</value>
+  </data>
+  <data name="Settings.Connection.TestSuccess" xml:space="preserve">
+    <value>✓ Connected to OPNsense — {0} | Authentication: OK | Latency: {1} ms</value>
+  </data>
+  <data name="Settings.Connection.TestFailedAuth" xml:space="preserve">
+    <value>✗ Authentication failed (check API key and secret)</value>
+  </data>
+  <data name="Settings.Connection.TestFailedNetwork" xml:space="preserve">
+    <value>✗ Could not reach OPNsense at {0}</value>
+  </data>
+  <data name="Settings.Connection.TestRunning" xml:space="preserve">
+    <value>Testing…</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Settings window — Credentials tab
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Settings.Tab.Credentials" xml:space="preserve">
+    <value>Credentials</value>
+  </data>
+  <data name="Settings.Credentials.ApiKey" xml:space="preserve">
+    <value>API key</value>
+  </data>
+  <data name="Settings.Credentials.ApiSecret" xml:space="preserve">
+    <value>API secret</value>
+  </data>
+  <data name="Settings.Credentials.RevealSecret" xml:space="preserve">
+    <value>Reveal</value>
+  </data>
+  <data name="Settings.Credentials.HideSecret" xml:space="preserve">
+    <value>Hide</value>
+  </data>
+  <data name="Settings.Credentials.ImportFile" xml:space="preserve">
+    <value>Import OPNsense API key file…</value>
+  </data>
+  <data name="Settings.Credentials.ImportSuccess" xml:space="preserve">
+    <value>✓ Imported key from file</value>
+  </data>
+  <data name="Settings.Credentials.ImportFailed" xml:space="preserve">
+    <value>✗ Failed to read the key file (expected format: key=... / secret=...)</value>
+  </data>
+  <data name="Settings.Credentials.HowToCreate" xml:space="preserve">
+    <value>How to create an API key</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Settings window — Gateways tab
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Settings.Tab.Gateways" xml:space="preserve">
+    <value>Gateways</value>
+  </data>
+  <data name="Settings.Gateways.ColumnDisplayName" xml:space="preserve">
+    <value>Display name</value>
+  </data>
+  <data name="Settings.Gateways.ColumnOpnsenseName" xml:space="preserve">
+    <value>OPNsense name</value>
+  </data>
+  <data name="Settings.Gateways.ColumnStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Settings.Gateways.ColumnActions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="Settings.Gateways.ResetButton" xml:space="preserve">
+    <value>Reset to OPNsense name</value>
+  </data>
+  <data name="Settings.Gateways.WaitingForCredentials" xml:space="preserve">
+    <value>Configure credentials to load gateways</value>
+  </data>
+  <data name="Settings.Gateways.ResetButtonToolTip" xml:space="preserve">
+    <value>Reset custom display name back to the original OPNsense name</value>
+  </data>
+  <data name="Settings.Gateways.Loading" xml:space="preserve">
+    <value>Loading gateways from OPNsense…</value>
+  </data>
+  <data name="Settings.Gateways.NoneFound" xml:space="preserve">
+    <value>No gateways configured in OPNsense yet.</value>
+  </data>
+  <data name="Settings.Gateways.SaveCredentialsFirst" xml:space="preserve">
+    <value>Save your credentials first, then reopen Settings to load gateways.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Settings window — Validation messages (Phase 1.3)
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Settings.Validation.HostRequired" xml:space="preserve">
+    <value>OPNsense address is required.</value>
+  </data>
+  <data name="Settings.Validation.HostInvalid" xml:space="preserve">
+    <value>Must be a valid URL (http://... or https://...).</value>
+  </data>
+  <data name="Settings.Validation.PreferredIpInvalid" xml:space="preserve">
+    <value>Must be a valid IPv4 address.</value>
+  </data>
+  <data name="Settings.Validation.ApiKeyRequired" xml:space="preserve">
+    <value>API key is required.</value>
+  </data>
+  <data name="Settings.Validation.ApiKeyTooShort" xml:space="preserve">
+    <value>API key looks too short (minimum 20 characters).</value>
+  </data>
+  <data name="Settings.Validation.ApiSecretRequired" xml:space="preserve">
+    <value>API secret is required.</value>
+  </data>
+  <data name="Settings.Validation.ApiSecretTooShort" xml:space="preserve">
+    <value>API secret looks too short (minimum 20 characters).</value>
+  </data>
+  <data name="Settings.Validation.DscpRangeInvalid" xml:space="preserve">
+    <value>DSCP must be 0–63 and Start ≤ End.</value>
+  </data>
+  <data name="Settings.Validation.LogRetentionInvalid" xml:space="preserve">
+    <value>Log retention must be 1-365 days.</value>
+  </data>
+  <data name="Settings.Connection.AutoTestStatus.Idle" xml:space="preserve">
+    <value>Waiting for credentials…</value>
+  </data>
+  <data name="Settings.Connection.AutoTestStatus.Checking" xml:space="preserve">
+    <value>Checking connection…</value>
+  </data>
+  <data name="Settings.Connection.AutoTestStatus.Success" xml:space="preserve">
+    <value>Connected to OPNsense</value>
+  </data>
+  <data name="Settings.Connection.AutoTestStatus.Failed" xml:space="preserve">
+    <value>Connection failed</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Settings window — Advanced tab
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Settings.Tab.Advanced" xml:space="preserve">
+    <value>Advanced</value>
+  </data>
+  <data name="Settings.Advanced.StartWithWindows" xml:space="preserve">
+    <value>Start OptiRoute with Windows</value>
+  </data>
+  <data name="Settings.Advanced.MinimizeToTray" xml:space="preserve">
+    <value>Minimize to tray when closing</value>
+  </data>
+  <data name="Settings.Advanced.ShowTechnical" xml:space="preserve">
+    <value>Show technical information</value>
+  </data>
+  <data name="Settings.Advanced.LogRetention" xml:space="preserve">
+    <value>Log retention (days):</value>
+  </data>
+  <data name="Settings.Advanced.DscpPoolToggle" xml:space="preserve">
+    <value>Enable advanced DSCP configuration</value>
+  </data>
+  <data name="Settings.Advanced.DscpPoolStart" xml:space="preserve">
+    <value>DSCP pool start:</value>
+  </data>
+  <data name="Settings.Advanced.DscpPoolEnd" xml:space="preserve">
+    <value>DSCP pool end:</value>
+  </data>
+  <data name="Settings.Advanced.Language" xml:space="preserve">
+    <value>Language:</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       First-run wizard
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Wizard.Welcome.Title" xml:space="preserve">
+    <value>Welcome to OptiRoute</value>
+  </data>
+  <data name="Wizard.Welcome.Subtitle" xml:space="preserve">
+    <value>Let's set up the connection to your OPNsense firewall in a few steps.</value>
+  </data>
+  <data name="Wizard.Step.Connection" xml:space="preserve">
+    <value>Connection</value>
+  </data>
+  <data name="Wizard.Step.Credentials" xml:space="preserve">
+    <value>Credentials</value>
+  </data>
+  <data name="Wizard.Step.Computer" xml:space="preserve">
+    <value>Computer</value>
+  </data>
+  <data name="Wizard.Step.Gateways" xml:space="preserve">
+    <value>Gateways</value>
+  </data>
+  <data name="Wizard.Step.Validation" xml:space="preserve">
+    <value>Validation</value>
+  </data>
+  <data name="Wizard.Step.Finish" xml:space="preserve">
+    <value>Finish</value>
+  </data>
+  <data name="Wizard.BackButton" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Wizard.NextButton" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="Wizard.FinishButton" xml:space="preserve">
+    <value>Finish</value>
+  </data>
+  <data name="Wizard.LaunchButton" xml:space="preserve">
+    <value>Launch OptiRoute</value>
+  </data>
+  <data name="Wizard.ValidationChecking" xml:space="preserve">
+    <value>Validating configuration…</value>
+  </data>
+  <data name="Wizard.ValidationPassed" xml:space="preserve">
+    <value>✓ All checks passed. Ready to launch.</value>
+  </data>
+  <data name="Wizard.CheckConnectionOk" xml:space="preserve">
+    <value>✓ OPNsense reachable</value>
+  </data>
+  <data name="Wizard.CheckCredentialsOk" xml:space="preserve">
+    <value>✓ Credentials valid</value>
+  </data>
+  <data name="Wizard.CheckIpOk" xml:space="preserve">
+    <value>✓ Local IPv4 detected</value>
+  </data>
+  <data name="Wizard.CheckGatewayOk" xml:space="preserve">
+    <value>✓ At least one usable gateway</value>
+  </data>
+  <data name="Wizard.CheckPersistOk" xml:space="preserve">
+    <value>✓ Settings persisted successfully</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Status messages (MainViewModel.StatusMessage)
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Status.Refreshing" xml:space="preserve">
+    <value>Refreshing…</value>
+  </data>
+  <data name="Status.NothingToRepair" xml:space="preserve">
+    <value>Nothing to repair.</value>
+  </data>
+  <data name="Status.Applying" xml:space="preserve">
+    <value>Applying {0} repair(s)…</value>
+  </data>
+  <data name="Status.ApplySuccess" xml:space="preserve">
+    <value>{0} repair(s) applied successfully.</value>
+  </data>
+  <data name="Status.ApplyPartialFailure" xml:space="preserve">
+    <value>{0} repair(s) applied, {1} failed — see log.</value>
+  </data>
+  <data name="Status.ApplyFailed" xml:space="preserve">
+    <value>Failed to apply repairs: {0}</value>
+  </data>
+  <data name="Status.RefreshSuccess" xml:space="preserve">
+    <value>{0} app(s) refreshed.</value>
+  </data>
+  <data name="Status.RefreshFailed" xml:space="preserve">
+    <value>Refresh failed: {0}</value>
+  </data>
+  <data name="Status.RemoveFailed" xml:space="preserve">
+    <value>Error removing local policy</value>
+  </data>
+  <data name="Status.Connecting" xml:space="preserve">
+    <value>Connecting to OPNsense and detecting network…</value>
+  </data>
+  <data name="Status.ConnectionFailed" xml:space="preserve">
+    <value>Could not connect to OPNsense. Check credentials in the vault.</value>
+  </data>
+  <data name="Status.Registering" xml:space="preserve">
+    <value>Registering '{0}' in OPNsense…</value>
+  </data>
+  <data name="Status.RegisterSuccess" xml:space="preserve">
+    <value>Application '{0}' added successfully!</value>
+  </data>
+  <data name="Status.AlreadyRegistered" xml:space="preserve">
+    <value>The application '{0}' is already registered in OptiRoute!</value>
+  </data>
+  <data name="Status.GenericError" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+</root>

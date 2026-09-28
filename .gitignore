@@ -1,0 +1,130 @@
+# ════════════════════════════════════════════════════════════════════════════
+# .NET / WPF
+# ════════════════════════════════════════════════════════════════════════════
+
+# Build outputs
+bin/
+obj/
+out/
+publish*/
+build-debug*/
+**/bin/
+**/obj/
+**/out/
+
+# NuGet
+*.nupkg
+*.snupkg
+**/.nuget/
+**/packages/
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+coverage*.xml
+coverage*.json
+
+# .NET tools
+.config/
+.dotnet/
+*.userprefs
+
+# ════════════════════════════════════════════════════════════════════════════
+# Visual Studio
+# ════════════════════════════════════════════════════════════════════════════
+
+.vs/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.userprefs
+*.pdb
+
+# ReSharper / Rider / CodeRush
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+.idea/
+
+# ════════════════════════════════════════════════════════════════════════════
+# OS-specific
+# ════════════════════════════════════════════════════════════════════════════
+
+# Windows
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+*.tmp
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+.fuse_hidden*
+.Trash-*
+
+# ════════════════════════════════════════════════════════════════════════════
+# Logs and runtime state
+# ════════════════════════════════════════════════════════════════════════════
+
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+
+# ════════════════════════════════════════════════════════════════════════════
+# Secrets and credentials
+# ════════════════════════════════════════════════════════════════════════════
+
+# Never commit API keys, secrets, or DPAPI-encrypted credentials
+**/apikey.txt
+**/api-key*
+**/*.dpapi
+secrets.json
+*.env
+.env
+.env.*
+
+# ════════════════════════════════════════════════════════════════════════════
+# OptiRoute-specific
+# ════════════════════════════════════════════════════════════════════════════
+
+# opencode editor local session cache (per-user, not project data)
+.opencode/
+
+# Local app data (config + DPAPI secrets) is per-user
+# These go to %APPDATA%\OptiRoute\ by design — not in repo
+config.local.json
+
+# Publish artifacts from local builds (single-file releases go to GitHub Releases)
+/publish/
+/publish2/
+/release/
+*.exe
+*.pdb
+*.deps.json
+
+# ════════════════════════════════════════════════════════════════════════════
+# Misc
+# ════════════════════════════════════════════════════════════════════════════
+
+# Compressed backups
+*.7z
+*.zip
+*.gz
+*.rar
+
+# Custom NuGet feeds (uncomment if using private feeds)
+# nuget.config

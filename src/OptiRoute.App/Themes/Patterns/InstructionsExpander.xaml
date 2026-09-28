@@ -1,0 +1,33 @@
+<UserControl x:Class="OptiRoute.App.Themes.Patterns.InstructionsExpander"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="200" d:DesignWidth="600">
+    <!--
+        InstructionsExpander: collapsible "How to obtain this data" panel.
+        Header: set via HeaderText DP (literal "How to obtain this data" default;
+                bind to {x:Static p:Strings.Settings_Instructions_Header} for i18n).
+        Content: set via Slot DP — accepts any UIElement (TextBlock, StackPanel, etc.).
+                 Consumers use property element syntax:
+                  <patterns:InstructionsExpander.Slot><TextBlock Text="..."/></patterns:InstructionsExpander.Slot>
+    -->
+    <Expander x:Name="RootExpander"
+              Header="How to obtain this data"
+              Foreground="{StaticResource Tokens.Accent.300}"
+              Background="Transparent"
+              IsExpanded="False"
+              FontSize="13"
+              FontWeight="SemiBold"
+              Margin="0,12,0,0">
+        <Border Background="{StaticResource Tokens.Surface.Card}"
+                BorderBrush="{StaticResource Tokens.Divider.Default}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource Tokens.Radius.Medium}"
+                Padding="{StaticResource Tokens.Thickness.3}"
+                Margin="0,8,0,0">
+            <ContentPresenter x:Name="ContentHost"/>
+        </Border>
+    </Expander>
+</UserControl>

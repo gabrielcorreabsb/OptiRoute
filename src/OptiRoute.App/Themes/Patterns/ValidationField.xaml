@@ -1,0 +1,23 @@
+<UserControl x:Class="OptiRoute.App.Themes.Patterns.ValidationField"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             mc:Ignorable="d"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             d:DesignHeight="80" d:DesignWidth="400">
+    <!--
+        ValidationField: input host + inline error TextBlock.
+        Consumers place their input control into InputHost via XAML or via the InputHost
+        Content property. Set ErrorText to show a red caption below; pass empty string
+        to hide. Bound ErrorText visibility drives the bottom block.
+    -->
+    <StackPanel>
+        <ContentControl x:Name="InputSlot" Focusable="False"/>
+        <TextBlock x:Name="ErrorBlock"
+                   Foreground="{StaticResource Tokens.Semantic.Error}"
+                   FontSize="12"
+                   Margin="0,4,0,0"
+                   TextWrapping="Wrap"
+                   Visibility="Collapsed"/>
+    </StackPanel>
+</UserControl>
