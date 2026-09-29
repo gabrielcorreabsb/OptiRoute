@@ -1,165 +1,133 @@
 # OptiRoute
 
-> Mark Windows packets with DSCP by executable. OPNsense routes them by gateway.
-> Multi-PC orchestration without a central server.
+![.NET 10](https://img.shields.io/badge/.NET-10-512BD4)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Build](https://img.shields.io/badge/build-passing-brightgreen)
 
-**Status:** Active development · v0.x · [Smoke testing](docs/smoke-test-checklist.md) in progress
+Multi-PC DSCP marker for OPNsense and Windows QoS. Each application binary (`bf6.exe`, `cod.exe`, and so on) receives a DSCP value on its outgoing Windows traffic; an OPNsense firewall rule then routes that traffic through the selected gateway. A single-PC rollout works too.
 
----
+## How we do things in this app
 
-## What is it?
+This is the load-bearing section. If you only read one part of this README, read this.
 
-OptiRoute keeps multiple Windows PCs each routing specific executables through specific
-WAN gateways on a shared OPNsense firewall — without touching individual router
-configs or running a Windows Service.
+### 1. No telemetry
 
-You register `bf6.exe → WAN2`. Every packet from that executable gets DSCP 26 marked
-on the Windows side. OPNsense sees the DSCP, matches a firewall rule, and routes
-through WAN2. Other traffic from other apps flows normally.
+OptiRoute makes network calls only to the OPNsense API configured by the user. There is no analytics, crash reporting, or phone-home service. The diagnostics export records the network endpoints contacted during the session; inspect it or verify the traffic with Wireshark.
 
-```
-┌──────────────┐                  ┌──────────────┐
-│  PC-A        │                  │  PC-B        │
-│ bf6.exe ─────┼─► DSCP 26 ─────► │              │
-│ (browser)    │                  │              │
-└──────────────┘                  └──────┬───────┘
-       │                                 │
-       └────────────┬────────────────────┘
-                    ▼
-            ┌──────────────┐
-            │   OPNsense   │
-            │   Firewall   │
-            │ ──────────── │
-            │ DSCP 26 → WAN2│
-            │ DSCP 33 → WAN1│
-            │ Other → LAN   │
-            └──────────────┘
-```
+### 2. Credentials stay local and encrypted
 
-## Features
+The OPNsense API key and secret are protected with Windows DPAPI and stored at `%APPDATA%\OptiRoute\credentials.bin`. They are bound to the current Windows user and are not sent anywhere except the configured OPNsense host. Diagnostics exports redact both values.
 
-- ✅ Per-executable DSCP marking via PowerShell `NetQosPolicy`
-- ✅ OPNsense firewall rules auto-generated with category `OptiRoute`
-- ✅ Multi-PC deduplication (same `.exe` on multiple PCs shares the same `AppId`)
-- ✅ Per-host override (PC-A can route bf6 through WAN2 while PC-B uses WAN1)
-- ✅ Conflict detection: catches tampering with either the OPNsense rule `tos` or the
-  Windows QoS DSCP
-- ✅ Self-healing on `tos/description` corruption (interactive dialog)
-- ✅ Idempotent: Sincronizar can be run repeatedly with no side-effects
-- ✅ DPAPI-encrypted credentials (never plaintext on disk)
+### 3. Configuration writes are atomic
 
-## Requirements
+Configuration saves write a temporary file and replace the existing file atomically (`AppConfigManager.Save`). A crash during a save leaves the previous configuration available.
 
-- Windows 10/11 x64 with Administrator rights
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (for development)
-- OPNsense 24.x or newer with API access enabled
-- A second machine (physical or VM) to validate multi-PC scenarios
+### 4. Language changes are live
 
-## Quick Start (Development)
+The language selector switches between English and Portuguese without restarting. The `LString` markup extension re-evaluates bindings when the culture changes through `LocalizedStrings`.
+
+### 5. Settings stay in the main window
+
+Settings are presented inline rather than in a separate modal window, keeping application lifetime and shutdown behavior predictable. See [`docs/architecture.md`](docs/architecture.md).
+
+### 6. OPNsense is the source of truth
+
+Windows QoS is the local projection of the state managed in OPNsense. Refresh and sync operations fetch canonical firewall state, reconcile local drift, and surface conflicts when a rule or DSCP value no longer matches. Only the apply stage mutates managed state.
+
+### 7. The DSCP pool is conservative
+
+The default pool is `0-7`, below commonly reserved values such as EF (`46`) and CS6/CS7 (`48-63`). The pool is validated to stay within `0-63` and avoid reserved values. Advanced settings can widen it, with a warning when reserved ranges would be crossed.
+
+### 8. Multi-PC operation is safe by construction
+
+Each application identity carries an `AppId` in the OPNsense rule description. When another PC already has a rule for the same executable, OptiRoute adopts the existing identity instead of creating a duplicate. Host-specific overrides remain available for different gateways.
+
+### 9. Inputs are validated before saving
+
+- OPNsense host: valid HTTP or HTTPS URL
+- Preferred local IP: valid IPv4 address when provided
+- API key and secret: at least 20 characters
+- DSCP pool: `0-63`, start less than or equal to end
+- Log retention: 1-365 days
+
+The Save command is disabled (`CanSave == false`) while validation errors remain.
+
+### 10. Saving credentials rebuilds the client
+
+When credentials change, the `OpnsenseClient` and dependent synchronizer/managers are rebuilt immediately. A restart is not required before the next connection or synchronization.
+
+## Install
+
+See [`docs/installation.md`](docs/installation.md) for Windows 10/11, .NET 10 SDK, OPNsense 24.x+, Administrator requirements, and build/publish commands. That guide is planned if it is not yet present in this checkout.
 
 ```powershell
-# Clone
 git clone https://github.com/gabrielcorreabsb/OptiRoute.git
 cd OptiRoute
-
-# Restore + build
-dotnet restore
-dotnet build -c Release
-
-# Run tests
-dotnet test
-
-# Launch the App (requires Admin)
-dotnet run --project src/OptiRoute.App -c Release
+dotnet publish src/OptiRoute.App -c Release -r win-x64 --self-contained true `
+  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+  -o publish
+.\publish\OptiRoute.exe
 ```
 
-End-user single-file release:
+## Usage
 
-```powershell
-dotnet publish src/OptiRoute.App `
-    -c Release `
-    -r win-x64 `
-    --self-contained true `
-    -p:PublishSingleFile=true `
-    -o publish
-```
+1. Run the executable; use **Run as administrator** the first time.
+2. On first launch, enter the OPNsense host, API key, and API secret.
+3. Select **Test Connection** (or wait for the connection test after editing fields).
+4. Add an executable such as `bf6.exe` and select its gateway.
+5. Select **Save** to push the rule to OPNsense and create the local QoS policy.
 
-Output: `publish/OptiRoute.App.exe` (~80 MB).
+For multi-PC setups, install OptiRoute on each PC and add the same executable. Existing managed identities are deduplicated automatically.
 
 ## Documentation
 
-| Doc | Purpose |
-|---|---|
-| [docs/architecture.md](docs/architecture.md) | DSCP=identity principle, reconciliation states, layering |
-| [docs/api-reference.md](docs/api-reference.md) | OPNsense REST endpoints + internal .NET contracts |
-| [docs/dscp-profiles.md](docs/dscp-profiles.md) | DSCP pool + ToS math |
-| [docs/opnsense-setup.md](docs/opnsense-setup.md) | OPNsense plugin/API setup |
-| [docs/windows-qos.md](docs/windows-qos.md) | Windows PowerShell NetQoS + `OptiRoute-` prefix |
-| [docs/smoke-test-checklist.md](docs/smoke-test-checklist.md) | Manual smoke test scenarios (A–F) |
-| [ROADMAP.md](ROADMAP.md) | High-level development status and open deltas |
+- [`docs/installation.md`](docs/installation.md) � prerequisites, build, and publishing
+- [`docs/troubleshooting.md`](docs/troubleshooting.md) � common issues and fixes (planned)
+- [`docs/architecture.md`](docs/architecture.md) � modules, persistence, synchronization, and i18n
+- [`SECURITY.md`](SECURITY.md) � credential handling and vulnerability reporting
+- [`CHANGELOG.md`](CHANGELOG.md) � version history (planned)
+- [`ROADMAP.md`](ROADMAP.md) � current work and future plans
 
-## Project Layout
-
-```
-OptiRoute/
-├── src/
-│   ├── OptiRoute.Core/          # Models, interfaces, sync orchestrator
-│   ├── OptiRoute.OPNsense/     # REST client (OpnsenseClient)
-│   ├── OptiRoute.Windows/       # Windows QoS PowerShell wrapper
-│   └── OptiRoute.App/           # WPF MVVM UI
-├── tests/
-│   ├── OptiRoute.Core.Tests/    # 50+ unit tests
-│   └── OptiRoute.Windows.Tests/ # PowerShell integration tests
-├── docs/                        # Architecture, API, smoke test
-├── ROADMAP.md                   # Status of every open delta
-└── OptiRoute.slnx               # Solution
-```
-
-## Architecture in 30 seconds
-
-```
-        ┌────────────────────────────────────────────┐
-        │ OptiRoute.App (WPF MVVM)                   │
-        │   MainViewModel → ApplyRepairCommand       │
-        └────────────────┬───────────────────────────┘
-                         │
-        ┌────────────────▼───────────────────────────┐
-        │ OptiRoute.Core (pure C#, no IO)            │
-        │   IOptiRouteSynchronizer                   │
-        │     SyncAsync → BuildPlanAsync →           │
-        │     ApplyPlanAsync → VerifyAsync           │
-        └─────┬──────────────────┬───────────────────┘
-              │                  │
-   ┌──────────▼───────┐  ┌───────▼──────────┐
-   │ WindowsQosManager│  │  OpnsenseClient  │
-   │ (PowerShell .ps1)│  │  (HttpClient)    │
-   └──────────────────┘  └──────────────────┘
-```
-
-The **pipeline** is non-trivial: every mutation flows through
-`BuildState → BuildPlan → user reviews → ApplyPlan → Verify`. Only `ApplyPlan` writes.
+Additional notes are available in [`docs/`](docs/), including OPNsense setup, Windows QoS, DSCP profiles, API reference, and smoke-test scenarios.
 
 ## Contributing
 
-Pull requests welcome for:
-- Bug reports (with log excerpt from `%APPDATA%\OptiRoute\OptiRoute.log`)
-- Additional smoke test scenarios (E, F still pending)
-- Localization (we plan en-US + pt-BR; more welcome)
-- Documentation improvements
+Pull requests are welcome. For large changes, open an issue first.
 
-This is an early-stage project. Major refactors happen. Open an issue before sending
-significant changes.
-
-## Security
-
-Report vulnerabilities via [SECURITY.md](SECURITY.md) (or as GitHub Security Advisories).
-
-Credentials are stored with Windows DPAPI. The App runs only as Administrator.
+- Follow the C# StyleCop profile and run `dotnet format` before committing.
+- Add XML documentation for public APIs.
+- Put user-facing strings in `Strings.resx` and `Strings.pt-BR.resx`; do not inline them.
+- Avoid new NuGet packages unless necessary and discussed first.
+- In XAML, use `StaticResource`; use `Styles.*` for controls and `Tokens.*` for raw values.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+[MIT](LICENSE) � Copyright � 2026 gabrielcorreabsb / OptiRoute contributors.
 
-## Author
+## Acknowledgments
 
-Gabriel Correa — https://github.com/gabrielcorreabsb
+- [OPNsense](https://opnsense.org/) for the firewall API
+- Microsoft PowerShell SDK for Windows QoS management
+- `System.Windows.Forms.NotifyIcon` for the optional tray icon
+
+
+## Features
+
+- Multi-PC WAN routing with a gateway per application
+- OPNsense API integration
+- Native file picker and running-process scanner for executables
+- Per-PC local overrides and effective-route display
+- English/Portuguese (Brazil) live language switching
+- Dark-theme UI with neutral badges and modal Add Application flow
+
+## Security & Data Storage
+
+Preferences are stored in `%APPDATA%\OptiRoute\config.json`; API credentials are DPAPI-encrypted in `%APPDATA%\OptiRoute\credentials.bin`. Logs are in `%APPDATA%\OptiRoute\OptiRoute.log`. Diagnostics contain system details, a non-sensitive config summary, credential presence, and the last 200 log lines; secrets are redacted. See [SECURITY.md](SECURITY.md).
+
+## Building from source
+
+```powershell
+dotnet build src/OptiRoute.App/OptiRoute.App.csproj -c Debug
+dotnet publish src/OptiRoute.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+```
+

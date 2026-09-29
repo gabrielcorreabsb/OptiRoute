@@ -53,7 +53,7 @@ O OptiRoute segue três princípios rígidos de segurança para não interferir 
 2. **Sem Exclusão Silenciosa de Políticas Órfãs:** Se uma política `OptiRoute-*` existir no Windows mas não estiver cadastrada no OPNsense (por exemplo, após testes manuais ou se outro usuário apagou a regra global no firewall), o OptiRoute **nunca a remove automaticamente**. Em vez disso, ele classifica o aplicativo como `⚠ Somente neste Windows` (`LocalOnly`) e oferece opções explícitas ao usuário:
    - `Remover do Windows`: Exclui a política local via PowerShell.
    - `+ Registrar no OPNsense`: Promove a aplicação para o firewall com detecção de colisão de DSCP.
-3. **Elevação UAC Automática:** A criação e remoção de políticas de rede no Windows exige privilégios de Administrador. O executável `OptiRoute.App.exe` contém um manifesto de aplicação (`app.manifest`) configurado com `requireAdministrator`, solicitando a elevação do usuário imediatamente ao abrir o aplicativo.
+3. **Elevação UAC Automática:** A criação e remoção de políticas de rede no Windows exige privilégios de Administrador. O executável `OptiRoute.exe` contém um manifesto de aplicação (`app.manifest`) configurado com `requireAdministrator`, solicitando a elevação do usuário imediatamente ao abrir o aplicativo.
 
 ---
 

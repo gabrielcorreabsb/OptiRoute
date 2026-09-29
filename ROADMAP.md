@@ -502,3 +502,13 @@ Fase 4 — Release Hygiene
   ↓
 Public Preview no GitHub
 ```
+
+## MVP status (2026-09-29)
+
+The current MVP is ready for release. Level 1+2 executable detection is complete: users can use the native file picker or select an executable found by `RunningProcessScanner`. The Add Application modal, gateway refresh/timing, ComboBox display, card layout, group filtering, and visual polish are complete.
+
+Optional follow-ups are Level 3 and Level 4 detection, smoke-test scenarios A�F, and real multi-PC dedup validation. These do not block the current MVP release.
+
+## MVP status (2026-09-29)
+
+**Released v2.1.0.** Remaining known limitations / v1.1 backlog: destructive-action confirmations, missing tooltips, deeper exception sanitization, ApiSecret zeroization, tests for DiagnosticsExporter.Sanitize, and verification that OpnsenseSettings.VerifyTls defaults securely. Optional Level 3/4 executable detection and real multi-PC validation remain non-blocking.

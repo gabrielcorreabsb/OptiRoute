@@ -78,7 +78,7 @@ Every row below **must** be in `Properties/Strings.resx` (en-US) and
 | `MainWindow.EmptyState.Action` | No apps state | `+ Add Application` | `+ Adicionar Aplicativo` |
 | `MainWindow.NotConnectedState.Title` | No config state | `OptiRoute isn't connected to OPNsense yet.` | `OptiRoute ainda n√£o est√° conectado ao OPNsense.` |
 | `MainWindow.NotConnectedState.Action` | No config state | `Open Settings` | `Abrir Configura√ß√µes` |
-| `MainWindow.VersionBadge` | Footer | `OptiRoute v0.3.0 (Multi-PC)` | `OptiRoute v0.3.0 (Multi-PC)` |
+| `MainWindow.VersionBadge` | Footer | `OptiRoute v2.1.0 (Multi-PC)` | `OptiRoute v2.1.0 (Multi-PC)` |
 
 ---
 
@@ -280,3 +280,44 @@ when the status bar is expanded:
 - [ ] Language picker in Settings changes UI text after restart.
 - [ ] No English string leaks into pt-BR UI and vice-versa.
 - [ ] Log messages stay en-US regardless of UI locale.
+
+---
+
+## 11. String inventory ‚Äî Add Application dialog
+
+| Resource Key | Context | en-US | pt-BR |
+|---|---|---|---|
+| `AddApplication.Title` | Window title | `Add Application` | `Adicionar Aplicativo` |
+| `AddApplication.ExecutableLabel` | Executable field | `Executable` | `Execut√°vel` |
+| `AddApplication.DisplayNameLabel` | Display-name field | `Display name` | `Nome de exibi√ß√£o` |
+| `AddApplication.BrowseButton` | File picker | `Browse...` | `Procurar...` |
+| `AddApplication.RunningApps` | Running-processes header | `Currently running` | `Em execu√ß√£o` |
+| `AddApplication.NoRunningApps` | Empty scan state | `(none detected)` | `(nenhum detectado)` |
+| `AddApplication.RefreshButton` | Rescan button | `Refresh` | `Atualizar` |
+| `AddApplication.OkButton` | Confirm button | `Add` | `Adicionar` |
+| `AddApplication.CancelButton` | Cancel button | `Cancel` | `Cancelar` |
+| `AddApplication.ExecutableRequired` | Validation message | `Executable is required` | `Execut√°vel √© obrigat√≥rio` |
+| `AddApplication.GatewayLabel` | Default gateway field | `Gateway` | `Gateway` |
+
+## Recent copy changes
+
+The resource files remain the authority and must keep identical keys in English and pt-BR.
+
+| Key | Current change |
+|---|---|
+| `MainWindow.BrandName` | `?` changed to `?` in both locales. |
+| `MainWindow.EmptyState.Subtitle` | Decorative `?` removed. |
+| `Card.GlobalOnly.Subtitle` | Uses ìexecutableî instead of ìgameî. |
+| `Card.SyncStateBadge.*` | Decorative `?`, `?`, and `?` removed. |
+| `AddApplication.*` | Added for the modal dialog, native picker, running-process list, gateway selection, and refresh actions. |
+
+The current visual language uses neutral badges and avoids decorative symbols in user-facing status strings.
+
+## 12. Final visual and connection copy
+
+| Resource Key | en-US | pt-BR |
+|---|---|---|
+| `Settings.Connection.AllowInsecureTls` | `Allow self-signed certificates (insecure)` | `Permitir certificados autoassinados (inseguro)` |
+| `Settings.Connection.AllowInsecureTlsTooltip` | `Disables TLS validation; enable only on a trusted network because of MITM risk.` | `Desativa a validaÁ„o TLS; habilite apenas em rede confi·vel devido ao risco de MITM.` |
+
+The header brand is `? OptiRoute`; badges are neutral and decorative symbols are omitted from status strings.
