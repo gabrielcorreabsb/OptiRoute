@@ -74,7 +74,22 @@ internal static class Strings
     public static string MainWindow_EmptyState_Title   => Get("MainWindow.EmptyState.Title");
     public static string MainWindow_EmptyState_Subtitle => Get("MainWindow.EmptyState.Subtitle");
     public static string MainWindow_EmptyState_AddButton => Get("MainWindow.EmptyState.AddButton");
+    public static string MainWindow_Button_AddFirstApp => Get("MainWindow.Button.AddFirstApp");
     public static string MainWindow_VersionFooter      => Get("MainWindow.VersionFooter");
+    public static string MainWindow_SettingsPanel_Title => Get("MainWindow.SettingsPanel.Title");
+    public static string MainWindow_SettingsPanel_FirstRunHint => Get("MainWindow.SettingsPanel.FirstRunHint");
+
+    // ── MainWindow — Status bar / loading stages (Phase 2 UX) ──────────────
+
+    public static string MainWindow_StatusBar_Connected    => Get("MainWindow.StatusBar.Connected");
+    public static string MainWindow_StatusBar_Disconnected => Get("MainWindow.StatusBar.Disconnected");
+    public static string MainWindow_StatusBar_Connecting   => Get("MainWindow.StatusBar.Connecting");
+    public static string MainWindow_StatusBar_Cancel       => Get("MainWindow.StatusBar.Cancel");
+    public static string MainWindow_StatusBar_TlsHint      => Get("MainWindow.StatusBar.TlsHint");
+    public static string MainWindow_LoadingStage_ReadingRules    => Get("MainWindow.LoadingStage.ReadingRules");
+    public static string MainWindow_LoadingStage_ComparingQos    => Get("MainWindow.LoadingStage.ComparingQos");
+    public static string MainWindow_LoadingStage_BuildingPlan    => Get("MainWindow.LoadingStage.BuildingPlan");
+    public static string MainWindow_LoadingStage_ApplyingChanges => Get("MainWindow.LoadingStage.ApplyingChanges");
 
     // ── Card — Synchronized state ──────────────────────────────────────────
 
@@ -146,6 +161,11 @@ internal static class Strings
     public static string Settings_Connection_TestFailedNetwork => Get("Settings.Connection.TestFailedNetwork");
     public static string Settings_Connection_TestSuccess(string version, string latency)
         => string.Format(Culture, Get("Settings.Connection.TestSuccess"), version, latency);
+    public static string Settings_Connection_AllowInsecureTls        => Get("Settings.Connection.AllowInsecureTls");
+    public static string Settings_Connection_InsecureTlsWarning      => Get("Settings.Connection.InsecureTlsWarning");
+    public static string Settings_Connection_TlsErrorHint            => Get("Settings.Connection.TlsErrorHint");
+    public static string Settings_Connection_TlsErrorHint_Short      => Get("Settings.Connection.TlsErrorHint.Short");
+    public static string Settings_Connection_AllowInsecureTlsTooltip => Get("Settings.Connection.AllowInsecureTlsTooltip");
 
     public static string Settings_Credentials_ApiKey       => Get("Settings.Credentials.ApiKey");
     public static string Settings_Credentials_ApiSecret    => Get("Settings.Credentials.ApiSecret");
@@ -162,7 +182,14 @@ internal static class Strings
     public static string Settings_Gateways_ColumnActions      => Get("Settings.Gateways.ColumnActions");
     public static string Settings_Gateways_ResetButton        => Get("Settings.Gateways.ResetButton");
     public static string Settings_Gateways_WaitingForCredentials => Get("Settings.Gateways.WaitingForCredentials");
+    public static string MainWindow_ToolTip_LanguageSelector => Get("MainWindow.ToolTip.LanguageSelector");
+    public static string Card_SyncStateBadge_Synchronized => Get("Card.SyncStateBadge.Synchronized");
+    public static string Card_SyncStateBadge_LocalOnly    => Get("Card.SyncStateBadge.LocalOnly");
+    public static string Card_SyncStateBadge_GlobalOnly   => Get("Card.SyncStateBadge.GlobalOnly");
+    public static string Card_SyncStateBadge_Conflict     => Get("Card.SyncStateBadge.Conflict");
+    public static string Card_SyncStateBadge_Unknown      => Get("Card.SyncStateBadge.Unknown");
     public static string Settings_Gateways_ResetButtonToolTip => Get("Settings.Gateways.ResetButtonToolTip");
+    public static string Settings_Gateways_EditDisplayNameToolTip => Get("Settings.Gateways.EditDisplayNameToolTip");
     public static string Settings_Gateways_Loading            => Get("Settings.Gateways.Loading");
     public static string Settings_Gateways_NoneFound          => Get("Settings.Gateways.NoneFound");
     public static string Settings_Gateways_SaveCredentialsFirst => Get("Settings.Gateways.SaveCredentialsFirst");
@@ -189,7 +216,6 @@ internal static class Strings
     public static string Settings_Advanced_DscpPoolToggle   => Get("Settings.Advanced.DscpPoolToggle");
     public static string Settings_Advanced_DscpPoolStart    => Get("Settings.Advanced.DscpPoolStart");
     public static string Settings_Advanced_DscpPoolEnd      => Get("Settings.Advanced.DscpPoolEnd");
-    public static string Settings_Advanced_Language         => Get("Settings.Advanced.Language");
 
     public static string Wizard_Welcome_Title    => Get("Wizard.Welcome.Title");
     public static string Wizard_Welcome_Subtitle => Get("Wizard.Welcome.Subtitle");
@@ -229,4 +255,38 @@ internal static class Strings
     public static string Status_RegisterSuccess(string exeName) => string.Format(Culture, Get("Status.RegisterSuccess"), exeName);
     public static string Status_AlreadyRegistered(string exeName) => string.Format(Culture, Get("Status.AlreadyRegistered"), exeName);
     public static string Status_GenericError(string detail) => string.Format(Culture, Get("Status.GenericError"), detail);
+
+    // ── Phase 3 — Diagnostics export / About / Tray ────────────────────────
+
+    public static string MainWindow_Button_ExportDiagnostics => Get("MainWindow.Button.ExportDiagnostics");
+    public static string DiagnosticsExport_Success(string path) => string.Format(Culture, Get("DiagnosticsExport.Success"), path);
+    public static string DiagnosticsExport_Failed(string detail) => string.Format(Culture, Get("DiagnosticsExport.Failed"), detail);
+
+    public static string About_Title       => Get("About.Title");
+    public static string About_Version(string version) => string.Format(Culture, Get("About.Version"), version);
+    public static string About_Description => Get("About.Description");
+    public static string About_License     => Get("About.License");
+    public static string About_Repository  => Get("About.Repository");
+    public static string About_Issues      => Get("About.Issues");
+    public static string About_Copyright(string holder) => string.Format(Culture, Get("About.Copyright"), holder);
+    public static string About_OkButton    => Get("About.OkButton");
+
+    public static string Tray_Menu_Show => Get("Tray.Menu.Show");
+    public static string Tray_Menu_Quit => Get("Tray.Menu.Quit");
+
+    // ── Add Application dialog (file picker + running process scanner) ─────
+
+    public static string AddApplication_Title              => Get("AddApplication.Title");
+    public static string AddApplication_ExecutableLabel    => Get("AddApplication.ExecutableLabel");
+    public static string AddApplication_DisplayNameLabel   => Get("AddApplication.DisplayNameLabel");
+    public static string AddApplication_BrowseButton       => Get("AddApplication.BrowseButton");
+    public static string AddApplication_RunningApps        => Get("AddApplication.RunningApps");
+    public static string AddApplication_NoRunningApps      => Get("AddApplication.NoRunningApps");
+    public static string AddApplication_RefreshButton      => Get("AddApplication.RefreshButton");
+    public static string AddApplication_OkButton           => Get("AddApplication.OkButton");
+    public static string AddApplication_CancelButton       => Get("AddApplication.CancelButton");
+    public static string AddApplication_ExecutableRequired => Get("AddApplication.ExecutableRequired");
+    public static string AddApplication_GatewayLabel       => Get("AddApplication.GatewayLabel");
+    public static string AddApplication_Subtitle           => Get("AddApplication.Subtitle");
+    public static string AddApplication_NoRunningAppsHint  => Get("AddApplication.NoRunningAppsHint");
 }

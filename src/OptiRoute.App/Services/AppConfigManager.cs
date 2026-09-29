@@ -33,6 +33,18 @@ public sealed class AppConfig
     /// <summary>Mapeamento {OPNsense gateway name → display name}. Substitui "CustomDisplayNames".</summary>
     public Dictionary<string, string> GatewayDisplayNames { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    // ── UI state ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Último diretório usado pelo file picker de "Add Application" (InitialDirectory
+    /// do OpenFileDialog). Persistido entre aberturas do dialog. Default: Program Files.
+    /// </summary>
+    public string LastUsedFolder { get; set; } = DefaultFolder;
+
+    /// <summary>Diretório default quando <see cref="LastUsedFolder"/> está vazio.</summary>
+    public static string DefaultFolder =>
+        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+
     // ── Advanced ─────────────────────────────────────────────────────────────
 
     public bool StartMinimizedToTray { get; set; }
@@ -44,6 +56,14 @@ public sealed class AppConfig
 
     public int LogRetentionDays { get; set; } = 30;
     public bool ShowTechnicalInformation { get; set; }
+
+    /// <summary>
+    /// Quando <c>true</c>, o cliente HTTP aceita certificados TLS self-signed/inválidos
+    /// ao falar com o OPNsense. Default <c>false</c> — validação TLS ligada — para impedir
+    /// que um atacante intercepte as credenciais Basic (key:secret) via MITM com cert falso.
+    /// Só deve ser habilitado para um OPNsense com certificado self-signed em rede confiável.
+    /// </summary>
+    public bool AllowInsecureTls { get; set; }
 }
 
 public static class AppConfigManager
@@ -86,6 +106,10 @@ public static class AppConfigManager
             if (cfg.SchemaVersion < CurrentSchemaVersion)
                 cfg = Migrate(cfg, cfg.SchemaVersion);
 
+            // Configs antigos (v1) não têm LastUsedFolder — aplica o default.
+            if (string.IsNullOrWhiteSpace(cfg.LastUsedFolder))
+                cfg.LastUsedFolder = AppConfig.DefaultFolder;
+
             return cfg;
         }
         catch
@@ -105,6 +129,11 @@ public static class AppConfigManager
         {
             Directory.CreateDirectory(Path.GetDirectoryName(ConfigPath)!);
             config.SchemaVersion = CurrentSchemaVersion;
+
+            // Nunca persistir vazio — mantém um InitialDirectory válido para o picker.
+            if (string.IsNullOrWhiteSpace(config.LastUsedFolder))
+                config.LastUsedFolder = AppConfig.DefaultFolder;
+
             var json = JsonSerializer.Serialize(config, JsonOpts);
 
             File.WriteAllText(ConfigTempPath, json);

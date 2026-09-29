@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Net;
 using System.Windows;
@@ -7,19 +8,48 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using OptiRoute.App.Properties;
 using OptiRoute.App.Services;
+using OptiRoute.App.Views;
 using OptiRoute.App.Windows;
 using OptiRoute.Core.Interfaces;
 using OptiRoute.Core.Models;
+using OptiRoute.Core.Services;
+using OptiRoute.OPNsense.Client;
+using OptiRoute.Windows.QoS;
+using OptiRoute.Windows.Security;
 using ApplicationIdentity = OptiRoute.Core.Models.ApplicationIdentity;
 
 namespace OptiRoute.App.ViewModels;
 
 public sealed class MainViewModel : ViewModelBase
 {
-    private readonly IOptiRouteSynchronizer _synchronizer;
-    private readonly IHostOverrideManager   _overrideManager;
-    private readonly IOpnsenseClient        _client;
+    // Mutáveis: RebuildClientAsync substitui estes três quando o usuário salva
+    // novas credenciais/host no SettingsPanel (sem exigir restart do App).
+    private IOptiRouteSynchronizer _synchronizer;
+    private IHostOverrideManager   _overrideManager;
+    private IOpnsenseClient        _client;
+
+    // Reutilizados no rebuild (não dependem do OPNsense client).
+    private readonly IWindowsQosManager     _qosManager;
+    private readonly IDscpRegistry          _dscpRegistry;
+
     private readonly ILogger<MainViewModel> _logger;
+    private readonly ILoggerFactory         _loggerFactory;
+
+    // ── Tray opcional (OFF por padrão) ──────────────────────────────────────
+    private TrayIcon? _trayIcon;
+
+    /// <summary>
+    /// True quando "Minimize to tray when closing" está habilitado e o tray foi
+    /// efetivamente criado. Só vira true por ação explícita do usuário (Settings) —
+    /// nunca no startup default.
+    /// </summary>
+    public bool IsMinimizeToTrayEnabled { get; private set; }
+
+    /// <summary>
+    /// Setado quando o usuário pede shutdown explícito (menu "Quit" do tray).
+    /// Enquanto false, fechar a janela com o tray ativo apenas a esconde.
+    /// </summary>
+    public bool IsExplicitShutdown { get; set; }
 
     /// <summary>
     /// Culturas suportadas pelo App (i18n). Exibidas no ComboBox de idioma da header.
@@ -31,21 +61,34 @@ public sealed class MainViewModel : ViewModelBase
         new CultureOption("pt-BR", "Português (BR)")
     };
 
+    /// <summary>
+    /// Nomes das etapas de sincronização exibidos na barra de status (footer).
+    /// Lê as chaves <c>MainWindow.LoadingStage.*</c> do resx a cada acesso, de forma
+    /// que acompanha a cultura atual (en-US / pt-BR) sem cache obsoleto. O custo de
+    /// reconstrução é desprezível (4 leituras de recurso).
+    /// </summary>
+    public static IReadOnlyList<string> LoadingStages => new[]
+    {
+        Strings.MainWindow_LoadingStage_ReadingRules,
+        Strings.MainWindow_LoadingStage_ComparingQos,
+        Strings.MainWindow_LoadingStage_BuildingPlan,
+        Strings.MainWindow_LoadingStage_ApplyingChanges,
+    };
+
     private CultureOption _selectedCulture = null!;
     public CultureOption SelectedCulture
     {
         get => _selectedCulture;
         set
         {
-            if (SetField(ref _selectedCulture, value))
+            if (SetField(ref _selectedCulture, value) && value is not null)
             {
-                // Persiste em config.json via AppConfigManager.Save. App.xaml.cs lê no próximo startup.
+                // Persiste em config.json (próximo startup lê daqui se user não trocou antes de fechar)
                 var cfg = AppConfigManager.Load();
                 cfg.Culture = value.Code;
                 AppConfigManager.Save(cfg);
-                try { System.Threading.Thread.CurrentThread.CurrentUICulture = new System.Globalization.CultureInfo(value.Code); }
-                catch { /* fallback to system culture */ }
-                StatusMessage = "Restart required for language change to take effect.";
+                // Aplica imediatamente: troca a cultura + dispara refresh de todos os bindings indexer
+                LocalizationManager.SetCulture(value.Code);
             }
         }
     }
@@ -56,12 +99,23 @@ public sealed class MainViewModel : ViewModelBase
     private string    _localIp = "Detectando...";
     private string    _opnsenseHost = "https://10.0.0.1";
     private bool      _isConnected;
+    private string?   _connectionError;
     private IPAddress _currentHostIp = IPAddress.Loopback;
 
     public string StatusMessage
     {
         get => _statusMessage;
         set => SetField(ref _statusMessage, value);
+    }
+
+    /// <summary>
+    /// Detalhe do último erro de conexão/sincronização. Nulo quando não há erro.
+    /// Exibido como tooltip do indicador de conexão no footer.
+    /// </summary>
+    public string? ConnectionError
+    {
+        get => _connectionError;
+        set => SetField(ref _connectionError, value);
     }
 
     public bool IsLoading
@@ -98,8 +152,81 @@ public sealed class MainViewModel : ViewModelBase
         set => SetField(ref _isConnected, value);
     }
 
+    private bool _isSettingsPanelVisible;
+
+    /// <summary>
+    /// Quando true, o MainWindow exibe o <c>SettingsPanel</c> inline ocupando
+    /// toda a área, escondendo o conteúdo normal (Header/Gateways/Apps/Footer).
+    /// </summary>
+    public bool IsSettingsPanelVisible
+    {
+        get => _isSettingsPanelVisible;
+        set
+        {
+            if (SetField(ref _isSettingsPanelVisible, value))
+                OnPropertyChanged(nameof(IsMainContentVisible));
+        }
+    }
+
+    /// <summary>Conveniência para bindings XAML: visível quando o painel está escondido.</summary>
+    public bool IsMainContentVisible => !_isSettingsPanelVisible;
+
+    private readonly bool _isFirstRun;
+
+    /// <summary>
+    /// Detectado uma única vez no construtor: true quando <c>config.json</c> ainda
+    /// não existe. Nesse caso a MainWindow abre com o <c>SettingsPanel</c> inline
+    /// (Welcome panel) automaticamente — sem wizard modal separado.
+    /// </summary>
+    public bool IsFirstRun => _isFirstRun;
+
+    private SettingsViewModel? _settingsVm;
+
+    /// <summary>
+    /// ViewModel do <c>SettingsPanel</c> inline. Criado por <see cref="ShowSettingsPanel"/>
+    /// e descartado por <see cref="HideSettingsPanel"/>.
+    /// </summary>
+    public SettingsViewModel? SettingsVm
+    {
+        get => _settingsVm;
+        private set => SetField(ref _settingsVm, value);
+    }
+
     public ObservableCollection<AppItemViewModel> Applications { get; } = [];
     public ObservableCollection<Gateway>          Gateways     { get; } = [];
+
+    /// <summary>
+    /// Nomes de gateway usados quando o OPNsense não retorna nenhum (config recém-criada
+    /// ou API indisponível). Mantém cache, UI e dialog de "Add Application" consistentes.
+    /// </summary>
+    private static readonly string[] FallbackGatewayNames = ["WAN2", "WAN_PPPOE", "LB_IPV4"];
+
+    /// <summary>
+    /// Heurística temporária para detectar gateway groups (ex.: load-balance) pelo nome.
+    /// O DTO do OPNsense ainda não popula <c>Gateway.IsGroup</c>; quando popular, trocar por
+    /// <c>!g.IsGroup</c>. Enquanto isso: prefixo "LB_" ou substring "GROUP".
+    /// </summary>
+    private static bool IsLikelyGroup(string name) =>
+        name.StartsWith("LB_", StringComparison.OrdinalIgnoreCase) ||
+        name.Contains("GROUP", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Nomes de gateway utilizáveis na seleção por aplicativo: exclui groups (heurística)
+    /// e cai no fallback filtrado quando a lista resultante fica vazia — mantendo card e
+    /// dialog "Add Application" consistentes.
+    /// </summary>
+    private static List<string> SelectableGatewayNames(IEnumerable<Gateway> gateways)
+    {
+        var names = gateways
+            .Select(g => g.Name)
+            .Where(n => !IsLikelyGroup(n))
+            .ToList();
+
+        if (names.Count == 0)
+            names = FallbackGatewayNames.Where(n => !IsLikelyGroup(n)).ToList();
+
+        return names;
+    }
 
     public bool HasApplications => Applications.Count > 0;
     public bool HasNoApplications => Applications.Count == 0;
@@ -130,23 +257,42 @@ public sealed class MainViewModel : ViewModelBase
     public ICommand ApplyRepairCommand { get; }
     public ICommand OpenSettingsCommand { get; }
 
+    /// <summary>Gera um arquivo de diagnóstico sanitizado (logs + sistema + config, sem segredos).</summary>
+    public ICommand ExportDiagnosticsCommand { get; }
+
+    /// <summary>Abre o modal "About" centralizado na MainWindow.</summary>
+    public ICommand ShowAboutCommand { get; }
+
+    /// <summary>
+    /// Cancela (melhor esforço) a sincronização em andamento. Nesta fase apenas
+    /// encerra o estado de carregamento — o cancelamento cooperativo via
+    /// <see cref="System.Threading.CancellationToken"/> será ligado numa fase futura.
+    /// </summary>
+    public ICommand CancelSyncCommand { get; }
+
     /// <summary>
     /// Sinaliza que o usuário clicou em "Settings" no header. MainWindow.xaml.cs
-    /// abre a janela modal passando o <see cref="ViewModels.SettingsViewModel"/>
-    /// construído pelo MainViewModel (compartilha IOpnsenseClient já configurado).
+    /// responde chamando <see cref="ShowSettingsPanel"/>, que constrói o
+    /// <see cref="ViewModels.SettingsViewModel"/> e o publica inline (sem janela modal).
     /// </summary>
-    public event EventHandler<SettingsViewModel>? OpenSettingsRequested;
+    public event EventHandler? OpenSettingsRequested;
 
     public MainViewModel(
         IOptiRouteSynchronizer synchronizer,
         IHostOverrideManager overrideManager,
         IOpnsenseClient client,
-        ILogger<MainViewModel> logger)
+        ILogger<MainViewModel> logger,
+        ILoggerFactory loggerFactory,
+        IWindowsQosManager qosManager,
+        IDscpRegistry dscpRegistry)
     {
         _synchronizer    = synchronizer;
         _overrideManager = overrideManager;
         _client          = client;
         _logger          = logger;
+        _loggerFactory   = loggerFactory;
+        _qosManager      = qosManager;
+        _dscpRegistry    = dscpRegistry;
 
         SyncCommand              = new AsyncRelayCommand(SyncAsync);
         AddApplicationCommand    = new AsyncRelayCommand(AddApplicationAsync);
@@ -158,18 +304,26 @@ public sealed class MainViewModel : ViewModelBase
         RepairConflictCommand    = new RelayCommand(RepairConflictApplication);
         ApplyRepairCommand       = new AsyncRelayCommand(ApplyRepairAsync, () => HasPendingRepair);
         OpenSettingsCommand      = new RelayCommand(OpenSettings);
+        ExportDiagnosticsCommand = new RelayCommand(ExportDiagnostics);
+        ShowAboutCommand         = new RelayCommand(ShowAbout);
+        CancelSyncCommand        = new RelayCommand(CancelSync);
 
         var config = AppConfigManager.Load();
         _opnsenseHost = config.OpnsenseHost;
+
+        // Primeira execução: sem config.json. A MainWindow consulta esta flag
+        // para exibir o Welcome panel inline automaticamente.
+        _isFirstRun = !AppConfigManager.Exists();
     }
 
     public async Task InitializeAsync()
     {
-        IsLoading = true;
-        StatusMessage = Strings.Status_Connecting;
-
         try
         {
+            IsLoading = true;
+            StatusMessage = Strings.Status_Connecting;
+            ConnectionError = null;
+
             _currentHostIp = LocalNetworkDetector.DetectLocalIp(OpnsenseHost);
             LocalIp = _currentHostIp.ToString();
 
@@ -177,6 +331,7 @@ public sealed class MainViewModel : ViewModelBase
             if (!IsConnected)
             {
                 StatusMessage = Strings.Status_ConnectionFailed;
+                ConnectionError = Strings.Status_ConnectionFailed;
                 return;
             }
 
@@ -186,6 +341,7 @@ public sealed class MainViewModel : ViewModelBase
         {
             _logger.LogError(ex, "Erro na inicialização");
             StatusMessage = Strings.Status_GenericError(ex.Message);
+            ConnectionError = ex.Message;
         }
         finally
         {
@@ -193,32 +349,118 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Reconstrói o <c>OpnsenseClient</c> (e os managers que dele dependem) com as
+    /// credenciais/host recém-salvos no SettingsPanel. Chamado pelo MainWindow logo
+    /// após <c>HideSettingsPanel()</c> e ANTES de <see cref="SyncAsync"/>, para que a
+    /// sincronização use as novas credenciais sem exigir restart do App.
+    ///
+    /// Reutiliza <c>qosManager</c>/<c>dscpRegistry</c> (não dependem do client) e
+    /// recria <c>RuleOrderManager</c>/<c>HostOverrideManager</c>/<c>OptiRouteSynchronizer</c>.
+    /// Sem credenciais ou host válidos, apenas registra o status e retorna sem rebuild.
+    /// </summary>
+    public async Task RebuildClientAsync()
+    {
+        try
+        {
+            var config = AppConfigManager.Load();
+            var creds  = SecretStore.LoadCredentials();
+
+            if (creds is null
+                || string.IsNullOrWhiteSpace(creds.ApiKey)
+                || string.IsNullOrWhiteSpace(creds.ApiSecret)
+                || string.IsNullOrWhiteSpace(config.OpnsenseHost))
+            {
+                _logger.LogInformation(
+                    "Rebuild do client ignorado: credenciais ou host OPNsense ausentes.");
+                IsConnected = false;
+                StatusMessage = Strings.Settings_Connection_AutoTestStatus_Idle;
+                return;
+            }
+
+            var settings = new OpnsenseSettings
+            {
+                Host         = config.OpnsenseHost,
+                ApiKey       = creds.ApiKey,
+                VerifyTls    = !config.AllowInsecureTls,
+                LanInterface = config.LanInterface
+            };
+
+            var httpClient   = OpnsenseHttpClientFactory.Create(settings, creds.ApiSecret);
+            var newClient    = new OpnsenseClient(httpClient, _loggerFactory.CreateLogger<OpnsenseClient>());
+            var orderManager = new RuleOrderManager(newClient, _loggerFactory.CreateLogger<RuleOrderManager>());
+            var overrideMgr  = new HostOverrideManager(
+                newClient, _dscpRegistry, orderManager, _loggerFactory.CreateLogger<HostOverrideManager>());
+            var synchronizer = new OptiRouteSynchronizer(
+                newClient, _qosManager, _dscpRegistry, orderManager, _loggerFactory.CreateLogger<OptiRouteSynchronizer>());
+
+            _client          = newClient;
+            _overrideManager = overrideMgr;
+            _synchronizer    = synchronizer;
+
+            OpnsenseHost = config.OpnsenseHost;
+
+            IsConnected = await newClient.TestConnectionAsync();
+            StatusMessage = IsConnected
+                ? Strings.Settings_Connection_AutoTestStatus_Success
+                : Strings.Settings_Connection_AutoTestStatus_Failed;
+
+            _logger.LogInformation("Client OPNsense reconstruído. Conectado={Connected}", IsConnected);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Falha ao reconstruir o client OPNsense");
+            IsConnected = false;
+            StatusMessage = Strings.Settings_Connection_AutoTestStatus_Failed;
+        }
+    }
+
     public async Task SyncAsync()
     {
         IsLoading = true;
         ProgressPercent = 0;
-        StatusMessage = Strings.Status_Refreshing;
+        ConnectionError = null;
+        StatusMessage = LoadingStages[0]; // "Reading OPNsense rules..."
 
         try
         {
             // Progress<SyncProgress> marshalla callbacks para a UI thread automaticamente.
             // A UI thread é quem dispara PropertyChanged, então a ProgressBar atualiza sem travar.
+            // O Stage reportado pelo synchronizer é mapeado para os nomes de etapa exibidos
+            // na barra de status (footer) — texto específico por fase em vez de "Refreshing…".
             var progress = new Progress<SyncProgress>(p =>
             {
                 ProgressPercent = p.Percent;
-                StatusMessage   = p.Message;
+                StatusMessage = p.Stage switch
+                {
+                    "init" or "rules" => LoadingStages[0], // Reading OPNsense rules...
+                    "merge" or "qos"  => LoadingStages[1], // Comparing with local QoS...
+                    "done"            => LoadingStages[2], // Building plan...
+                    _                 => LoadingStages[0]
+                };
             });
 
             var result = await _synchronizer.SyncAsync(_currentHostIp, progress);
 
-            // Atualiza gateways
-            Gateways.Clear();
-            foreach (var gw in result.Gateways)
-                Gateways.Add(gw);
+            // Etapa final antes de montar o plano de reparo na UI.
+            StatusMessage = LoadingStages[2]; // Building plan...
 
-            var gatewayNames = result.Gateways.Select(g => g.Name).ToList();
-            if (!gatewayNames.Any())
-                gatewayNames = ["WAN2", "WAN_PPPOE", "LB_IPV4"];
+            // Atualiza gateways. Quando o OPNsense não retorna nenhum, popula a coleção
+            // com o fallback para que cache, UI e o dialog de "Add Application" fiquem
+            // consistentes (evita gateway picker vazio na 1ª abertura).
+            Gateways.Clear();
+            if (result.Gateways.Count > 0)
+            {
+                foreach (var gw in result.Gateways)
+                    Gateways.Add(gw);
+            }
+            else
+            {
+                foreach (var name in FallbackGatewayNames)
+                    Gateways.Add(new Gateway { Name = name });
+            }
+
+            var gatewayNames = SelectableGatewayNames(Gateways);
 
             // Atualiza lista de aplicativos
             Applications.Clear();
@@ -247,11 +489,20 @@ public sealed class MainViewModel : ViewModelBase
                 ? $"Sincronizado! {Applications.Count} aplicativo(s), {PendingRepairCount} reparo(s) pendente(s)."
                 : $"Sincronizado! {Applications.Count} aplicativos ativos na rede.";
             IsConnected = true;
+            ConnectionError = null;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erro na sincronização");
-            StatusMessage = Strings.Status_RefreshFailed(ex.Message);
+            var message = Strings.Status_RefreshFailed(ex.Message);
+
+            // Falha de TLS em runtime: sugere o toggle (só enquanto ele está desligado,
+            // para não dar conselho enganoso a quem já o habilitou).
+            if (!AppConfigManager.Load().AllowInsecureTls && TlsErrorDetector.IsTlsError(ex))
+                message = $"{message} · {Strings.MainWindow_StatusBar_TlsHint}";
+
+            StatusMessage = message;
+            ConnectionError = ex.Message;
         }
         finally
         {
@@ -263,16 +514,27 @@ public sealed class MainViewModel : ViewModelBase
 
     private async Task AddApplicationAsync()
     {
-        var openFileDialog = new OpenFileDialog
-        {
-            Title = "Selecione o Executável do Jogo / Aplicativo",
-            Filter = "Executáveis (*.exe)|*.exe|Todos os arquivos (*.*)|*.*"
-        };
+        // Gateways utilizáveis: exclui groups (heurística de nome) e cai no fallback
+        // filtrado quando a coleção está vazia (dialog aberto antes de sincronizar).
+        var gatewayNames = SelectableGatewayNames(Gateways);
 
-        if (openFileDialog.ShowDialog() != true)
+        var dialog = new AddApplicationDialog(
+            gatewayNames,
+            async () =>
+            {
+                // Re-sincroniza com o OPNsense e devolve a lista utilizável atualizada.
+                // SyncAsync() engole falhas (mantém Gateways) — o dialog nunca esvazia.
+                await SyncAsync();
+                return SelectableGatewayNames(Gateways);
+            });
+        if (Application.Current?.MainWindow is { } owner && !ReferenceEquals(owner, dialog))
+            dialog.Owner = owner;
+        dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+
+        if (dialog.ShowDialog() != true)
             return;
 
-        var exePath = openFileDialog.FileName;
+        var exePath = dialog.Executable;
         var exeName = Path.GetFileName(exePath);
 
         // Se já existir na lista, avisa
@@ -287,8 +549,10 @@ public sealed class MainViewModel : ViewModelBase
 
         try
         {
-            var defaultGateway = Gateways.FirstOrDefault()?.Name ?? "WAN2";
-            var identity = ApplicationIdentity.Create(exePath);
+            var defaultGateway = string.IsNullOrWhiteSpace(dialog.Gateway)
+                ? (Gateways.FirstOrDefault()?.Name ?? "WAN2")
+                : dialog.Gateway;
+            var identity = ApplicationIdentity.Create(exePath, dialog.DisplayName);
 
             await _synchronizer.RegisterOrUpdateApplicationAsync(identity, defaultGateway);
             await SyncAsync();
@@ -512,15 +776,203 @@ public sealed class MainViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Abre a janela de configurações. Constrói um SettingsViewModel reusando o
-    /// IOpnsenseClient já configurado (mesma sessão HTTP + logger). Dispara o evento
-    /// <see cref="OpenSettingsRequested"/>; MainWindow.xaml.cs é quem exibe a janela
-    /// (mantém o VM livre de tipos UI).
+    /// Sinaliza que o usuário clicou em "Settings" no header. Em primeira execução
+    /// (sem config.json) força o <see cref="ShowSettingsPanel"/> diretamente — o
+    /// Welcome panel aparece sem depender de handler da Window. Caso contrário
+    /// apenas levanta <see cref="OpenSettingsRequested"/> para o MainWindow exibir
+    /// o painel inline.
     /// </summary>
     private void OpenSettings()
     {
-        var settingsVm = new SettingsViewModel(_client);
-        OpenSettingsRequested?.Invoke(this, settingsVm);
+        if (IsFirstRun && !AppConfigManager.Exists())
+        {
+            ShowSettingsPanel();
+            return;
+        }
+
+        OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Command do botão "Cancelar" da barra de status. Nesta fase o cancelamento
+    /// é apenas visual: se não há sincronização em andamento é no-op; caso
+    /// contrário encerra o estado de carregamento. Cancelamento cooperativo real
+    /// (CancellationToken propagado ao <c>SyncAsync</c>) fica para uma fase futura.
+    /// </summary>
+    private void CancelSync()
+    {
+        if (!IsLoading)
+            return;
+
+        _logger.LogInformation("Sincronização cancelada pelo usuário (visual).");
+        IsLoading = false;
+        ProgressPercent = 0;
+    }
+
+    // ── Phase 3: Diagnostics export ─────────────────────────────────────────
+
+    /// <summary>
+    /// Exporta um relatório de diagnóstico sanitizado. Abre um SaveFileDialog com
+    /// nome default contendo timestamp e, ao confirmar, grava o conteúdo gerado
+    /// por <see cref="DiagnosticsExporter.BuildContent"/>.
+    /// </summary>
+    private void ExportDiagnostics()
+    {
+        var dialog = new SaveFileDialog
+        {
+            Title = Strings.MainWindow_Button_ExportDiagnostics,
+            Filter = "Text files (*.txt)|*.txt",
+            DefaultExt = ".txt",
+            FileName = $"OptiRoute-diagnostics-{DateTime.Now:yyyyMMdd-HHmmss}.txt"
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            var content = DiagnosticsExporter.BuildContent();
+            DiagnosticsExporter.Export(dialog.FileName, content);
+
+            MessageBox.Show(
+                Strings.DiagnosticsExport_Success(dialog.FileName),
+                "OptiRoute",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Falha ao exportar diagnóstico");
+            MessageBox.Show(
+                Strings.DiagnosticsExport_Failed(ex.Message),
+                "OptiRoute",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    // ── Phase 3: About dialog ───────────────────────────────────────────────
+
+    private void ShowAbout()
+    {
+        var window = new AboutWindow();
+        if (Application.Current?.MainWindow is { } owner && !ReferenceEquals(owner, window))
+            window.Owner = owner;
+        window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        window.ShowDialog();
+    }
+
+    // ── Phase 3: Tray opcional (OFF por padrão) ─────────────────────────────
+
+    /// <summary>
+    /// Reconcilia o estado do tray com a preferência persistida
+    /// (<c>StartMinimizedToTray</c>). Chamado pelo MainWindow no startup e após
+    /// salvar as Settings. É no-op quando o estado não muda e <b>nunca</b> cria um
+    /// <c>NotifyIcon</c> sem opt-in explícito do usuário.
+    /// </summary>
+    public void RefreshMinimizeToTray()
+    {
+        if (AppConfigManager.Load().StartMinimizedToTray)
+            EnableTray();
+        else
+            DisableTray();
+    }
+
+    private void EnableTray()
+    {
+        if (_trayIcon is not null)
+            return;
+
+        if (Application.Current?.MainWindow is not MainWindow mainWindow)
+            return;
+
+        _trayIcon = new TrayIcon(mainWindow);
+        _trayIcon.ShowRequested += (_, _) => RestoreMainWindow(mainWindow);
+        _trayIcon.QuitRequested += (_, _) =>
+        {
+            IsExplicitShutdown = true;
+            Application.Current.Shutdown();
+        };
+        mainWindow.Closing += OnMainWindowClosing;
+        Application.Current.SessionEnding += OnSessionEnding;
+
+        IsMinimizeToTrayEnabled = true;
+    }
+
+    private void DisableTray()
+    {
+        if (_trayIcon is null)
+            return;
+
+        if (Application.Current?.MainWindow is MainWindow mainWindow)
+            mainWindow.Closing -= OnMainWindowClosing;
+        if (Application.Current is not null)
+            Application.Current.SessionEnding -= OnSessionEnding;
+
+        _trayIcon.Dispose();
+        _trayIcon = null;
+        IsMinimizeToTrayEnabled = false;
+    }
+
+    /// <summary>
+    /// Com o tray ativo, fechamentos iniciados pelo usuário (X) apenas escondem a
+    /// janela. O "Quit" explícito do tray e o encerramento de sessão do Windows
+    /// marcam <see cref="IsExplicitShutdown"/> e prosseguem normalmente.
+    /// (WPF não expõe CloseReason em <c>Window.Closing</c>.)
+    /// </summary>
+    private void OnMainWindowClosing(object? sender, CancelEventArgs e)
+    {
+        if (IsExplicitShutdown || _trayIcon is null)
+            return;
+
+        e.Cancel = true;
+        if (sender is Window window)
+            window.Hide();
+    }
+
+    private void OnSessionEnding(object sender, SessionEndingCancelEventArgs e)
+        => IsExplicitShutdown = true;
+
+    private static void RestoreMainWindow(Window window)
+    {
+        window.Show();
+        if (window.WindowState == WindowState.Minimized)
+            window.WindowState = WindowState.Normal;
+        window.Activate();
+    }
+
+    /// <summary>
+    /// Exibe o <c>SettingsPanel</c> inline no MainWindow. Constrói um
+    /// <see cref="SettingsViewModel"/> novo reusando o <c>IOpnsenseClient</c> já
+    /// configurado e zera <see cref="IsLoading"/> (cancela o overlay de sincronização
+    /// em andamento). Idempotente: se já visível, apenas garante a visibilidade.
+    /// Quando ainda não há config.json, abre em modo first-run (Welcome panel).
+    /// </summary>
+    public void ShowSettingsPanel()
+    {
+        if (SettingsVm is null)
+        {
+            IsLoading = false;
+            var firstRun = !AppConfigManager.Exists();
+            // First-run: passa client null para o SettingsViewModel construir clientes
+            // efêmeros a partir dos valores digitados (mesmo caminho do antigo wizard).
+            // Normal: reusa o IOpnsenseClient já configurado no MainViewModel.
+            SettingsVm = firstRun
+                ? new SettingsViewModel(opnsenseClient: null!, isFirstRun: true)
+                : new SettingsViewModel(_client, isFirstRun: false);
+        }
+
+        IsSettingsPanelVisible = true;
+    }
+
+    /// <summary>
+    /// Esconde o <c>SettingsPanel</c> inline e descarta o <see cref="SettingsVm"/>
+    /// (um novo é criado na próxima abertura).
+    /// </summary>
+    public void HideSettingsPanel()
+    {
+        SettingsVm = null;
+        IsSettingsPanelVisible = false;
     }
 
     /// <summary>
@@ -537,7 +989,7 @@ public sealed class MainViewModel : ViewModelBase
         }
 
         IsLoading = true;
-        StatusMessage = Strings.Status_Applying(LatestPlan.ActionCount);
+        StatusMessage = LoadingStages[3]; // "Applying changes..."
         var applied = 0;
         var errors  = 0;
 

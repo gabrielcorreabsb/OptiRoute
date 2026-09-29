@@ -9,15 +9,31 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
+    <!-- Produce OptiRoute.exe instead of deriving the name from the
+         OptiRoute.App project/assembly. -->
+    <AssemblyName>OptiRoute</AssemblyName>
+    <AssemblyTitle>OptiRoute</AssemblyTitle>
+    <Product>OptiRoute</Product>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- WinForms apenas para o NotifyIcon do tray opcional (Phase 3). -->
+    <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.12" />
+  </ItemGroup>
+
+  <!-- Remove os global usings que o SDK do WinForms injeta automaticamente.
+       Sem isso, System.Windows.Forms/System.Drawing tornam ambíguos tipos WPF
+       já usados no app (Application, MessageBox, UserControl, Brush, Color).
+       TrayIcon.cs referencia WinForms explicitamente via alias. -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
   </ItemGroup>
 
 </Project>

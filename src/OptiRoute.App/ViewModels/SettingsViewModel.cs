@@ -16,8 +16,9 @@ using OptiRoute.Windows.Security;
 namespace OptiRoute.App.ViewModels;
 
 /// <summary>
-/// ViewModel da <c>SettingsWindow.xaml</c>. Suporta modo normal (4 tabs) e modo first-run wizard
-/// (passos sequenciais). Persistência transacional via <see cref="AppConfigManager.Save"/>.
+/// ViewModel do painel de Settings inline (SettingsPanel.xaml). Suporta modo normal
+/// (4 tabs) e modo first-run (Welcome panel).
+/// Persistência transacional via <see cref="AppConfigManager.Save"/>.
 /// </summary>
 public sealed class SettingsViewModel : ViewModelBase
 {
@@ -77,15 +78,7 @@ public sealed class SettingsViewModel : ViewModelBase
         DscpPoolStart     = cfg.DscpPoolStart;
         DscpPoolEnd       = cfg.DscpPoolEnd;
         LogRetentionDays  = cfg.LogRetentionDays;
-
-        AvailableCultures = new ObservableCollection<CultureOption>
-        {
-            new("en-US", "English"),
-            new("pt-BR", "Português (BR)")
-        };
-        SelectedCulture = AvailableCultures.FirstOrDefault(c => c.Code == cfg.Culture)
-                          ?? AvailableCultures.FirstOrDefault(c => c.Code == System.Globalization.CultureInfo.CurrentUICulture.Name)
-                          ?? AvailableCultures.First();
+        AllowInsecureTls  = cfg.AllowInsecureTls;
 
         DetectIpCommand        = new RelayCommand(DetectIp);
         SaveCommand            = new RelayCommand(Save, () => CanSave);
@@ -131,6 +124,25 @@ public sealed class SettingsViewModel : ViewModelBase
     private string _detectedIp = string.Empty;
     public string DetectedIp { get => _detectedIp; set => SetField(ref _detectedIp, value); }
 
+    /// <summary>
+    /// Aceita certificados TLS self-signed/inválidos (default false = validação ligada).
+    /// Toggle dispara novo auto-test, pois muda o resultado da validação de conexão.
+    /// </summary>
+    private bool _allowInsecureTls;
+    public bool AllowInsecureTls
+    {
+        get => _allowInsecureTls;
+        set
+        {
+            if (SetField(ref _allowInsecureTls, value))
+            {
+                ScheduleAutoTest();
+                // O hint TLS inline some quando o toggle é habilitado.
+                OnPropertyChanged(nameof(TestStatusDisplay));
+            }
+        }
+    }
+
     public ICommand DetectIpCommand { get; }
 
     private void DetectIp()
@@ -145,6 +157,9 @@ public sealed class SettingsViewModel : ViewModelBase
     private TestStatus _testStatus = TestStatus.Idle;
     private string _testStatusText = Strings.Settings_Connection_AutoTestStatus_Idle;
     private string _testStatusTooltip = string.Empty;
+
+    /// <summary>True quando a última falha de auto-test foi causada por validação TLS.</summary>
+    private bool _lastTestWasTls;
 
     private static readonly SolidColorBrush SuccessBrush  = CreateFrozenBrush(Color.FromRgb(0x10, 0xB9, 0x81));
     private static readonly SolidColorBrush FailedBrush   = CreateFrozenBrush(Color.FromRgb(0xEF, 0x44, 0x44));
@@ -168,6 +183,7 @@ public sealed class SettingsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(TestStatusText));
                 OnPropertyChanged(nameof(TestStatusBrush));
                 OnPropertyChanged(nameof(TestStatusIcon));
+                OnPropertyChanged(nameof(TestStatusDisplay));
             }
         }
     }
@@ -175,7 +191,11 @@ public sealed class SettingsViewModel : ViewModelBase
     public string TestStatusText
     {
         get => _testStatusText;
-        private set => SetField(ref _testStatusText, value);
+        private set
+        {
+            if (SetField(ref _testStatusText, value))
+                OnPropertyChanged(nameof(TestStatusDisplay));
+        }
     }
 
     public Brush TestStatusBrush => _testStatus switch
@@ -201,6 +221,16 @@ public sealed class SettingsViewModel : ViewModelBase
     }
 
     /// <summary>
+    /// Versão do status exibida inline no footer. Em falha por certificado TLS (com o
+    /// toggle desabilitado), acrescenta a recomendação curta de habilitar
+    /// "Allow self-signed certificates" — visível SEM hover (o tooltip continua separado).
+    /// </summary>
+    public string TestStatusDisplay =>
+        _testStatus == TestStatus.Failed && _lastTestWasTls && !AllowInsecureTls
+            ? $"{_testStatusText} · {Strings.Settings_Connection_TlsErrorHint_Short}"
+            : _testStatusText;
+
+    /// <summary>
     /// Agenda um auto-test 500ms após a última mudança em OpnsenseHost/ApiKey/ApiSecret.
     /// Cancela testes pendentes se o usuário continuar digitando.
     /// Belt-and-suspenders: `?.` no timer cobre cenários onde o VM ainda não terminou de
@@ -220,6 +250,7 @@ public sealed class SettingsViewModel : ViewModelBase
             || string.IsNullOrWhiteSpace(ApiKey)
             || string.IsNullOrWhiteSpace(ApiSecret))
         {
+            _lastTestWasTls = false;
             TestStatus = TestStatus.Idle;
             TestStatusText = Strings.Settings_Connection_AutoTestStatus_Idle;
             TestStatusTooltip = string.Empty;
@@ -227,9 +258,11 @@ public sealed class SettingsViewModel : ViewModelBase
             GatewaysStatus = Strings.Settings_Gateways_WaitingForCredentials;
             return;
         }
+
+        _lastTestWasTls = false;
         try
         {
-            var settings = new OpnsenseSettings { Host = OpnsenseHost, ApiKey = ApiKey, VerifyTls = false };
+            var settings = new OpnsenseSettings { Host = OpnsenseHost, ApiKey = ApiKey, VerifyTls = !AllowInsecureTls };
             using var http = OpnsenseHttpClientFactory.Create(settings, ApiSecret);
             var opn = new OpnsenseClient(http,
                 Microsoft.Extensions.Logging.Abstractions.NullLogger<OptiRoute.OPNsense.Client.OpnsenseClient>.Instance);
@@ -242,9 +275,12 @@ public sealed class SettingsViewModel : ViewModelBase
         }
         catch (HttpRequestException ex)
         {
+            _lastTestWasTls = TlsErrorDetector.IsTlsError(ex);
             TestStatus = TestStatus.Failed;
             TestStatusText = Strings.Settings_Connection_AutoTestStatus_Failed;
-            TestStatusTooltip = $"{Strings.Settings_Connection_TestFailedNetwork} ({ex.Message})";
+            TestStatusTooltip = (!AllowInsecureTls && _lastTestWasTls)
+                ? Strings.Settings_Connection_TlsErrorHint
+                : $"{Strings.Settings_Connection_TestFailedNetwork} ({ex.Message})";
             Gateways.Clear();
             GatewaysStatus = Strings.Settings_Gateways_WaitingForCredentials;
         }
@@ -258,9 +294,12 @@ public sealed class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
+            _lastTestWasTls = TlsErrorDetector.IsTlsError(ex);
             TestStatus = TestStatus.Failed;
             TestStatusText = Strings.Settings_Connection_AutoTestStatus_Failed;
-            TestStatusTooltip = ex.Message;
+            TestStatusTooltip = (!AllowInsecureTls && _lastTestWasTls)
+                ? Strings.Settings_Connection_TlsErrorHint
+                : ex.Message;
             Gateways.Clear();
             GatewaysStatus = Strings.Settings_Gateways_WaitingForCredentials;
         }
@@ -362,7 +401,7 @@ public sealed class SettingsViewModel : ViewModelBase
                 GatewaysStatus = Strings.Settings_Gateways_WaitingForCredentials;
                 return;
             }
-            var settings = new OpnsenseSettings { Host = OpnsenseHost, ApiKey = ApiKey, VerifyTls = false };
+            var settings = new OpnsenseSettings { Host = OpnsenseHost, ApiKey = ApiKey, VerifyTls = !AllowInsecureTls };
             var http = OpnsenseHttpClientFactory.Create(settings, ApiSecret);
             client = new OpnsenseClient(http,
                 Microsoft.Extensions.Logging.Abstractions.NullLogger<OptiRoute.OPNsense.Client.OpnsenseClient>.Instance);
@@ -397,10 +436,6 @@ public sealed class SettingsViewModel : ViewModelBase
     }
 
     // ── Advanced tab ────────────────────────────────────────────────────
-
-    public ObservableCollection<CultureOption> AvailableCultures { get; }
-    private CultureOption? _selectedCulture;
-    public CultureOption? SelectedCulture { get => _selectedCulture; set => SetField(ref _selectedCulture, value); }
 
     public bool StartWithWindows { get; set; }
     public bool MinimizeToTray   { get; set; }
@@ -565,7 +600,7 @@ public sealed class SettingsViewModel : ViewModelBase
         cfg.DscpPoolStart            = DscpPoolStart;
         cfg.DscpPoolEnd              = DscpPoolEnd;
         cfg.LogRetentionDays         = LogRetentionDays;
-        if (SelectedCulture is not null) cfg.Culture = SelectedCulture.Code;
+        cfg.AllowInsecureTls         = AllowInsecureTls;
 
         AppConfigManager.Save(cfg);
         SecretStore.SaveCredentials(new OpnsenseCredentials(ApiKey, ApiSecret));

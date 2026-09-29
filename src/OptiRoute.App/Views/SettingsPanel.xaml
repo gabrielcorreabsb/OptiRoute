@@ -1,18 +1,15 @@
-<Window x:Class="OptiRoute.App.Windows.SettingsWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:p="clr-namespace:OptiRoute.App.Properties"
-        xmlns:patterns="clr-namespace:OptiRoute.App.Themes.Patterns"
-        Title="{x:Static p:Strings.Settings_WindowTitle}"
-        Height="640" Width="780"
-        MinHeight="540" MinWidth="680"
-        WindowStartupLocation="CenterOwner"
-        Background="{StaticResource Tokens.Surface.Window}"
-        Foreground="{StaticResource Tokens.Text.Primary}"
-        ShowInTaskbar="False"
-        ResizeMode="CanResize">
+<UserControl x:Class="OptiRoute.App.Views.SettingsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:p="clr-namespace:OptiRoute.App.Properties"
+             xmlns:patterns="clr-namespace:OptiRoute.App.Themes.Patterns"
+             xmlns:loc="clr-namespace:OptiRoute.App.Markup"
+             mc:Ignorable="d"
+             d:DesignHeight="540" d:DesignWidth="780">
 
-    <Grid Margin="16">
+    <Grid Margin="0">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
@@ -71,6 +68,8 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <patterns:InstructionsExpander Grid.Row="0"
@@ -81,7 +80,7 @@
                                 <Run Text="1. Open your OPNsense web interface in a browser."/><LineBreak/>
                                 <Run Text="2. The address shown in the address bar is your OPNsense host (e.g. https://192.168.1.1)."/><LineBreak/>
                                 <Run Text="3. Typical addresses: https://10.0.0.1, https://192.168.1.1, https://opnsense.local"/><LineBreak/>
-                                <Run Text="4. Click 'Detect Again' to auto-fill your local IPv4."/><LineBreak/>
+                                <Run Text="4. Click 'Detect Again' to auto-fill your your IP."/><LineBreak/>
                                 <Run Text="5. Connection auto-tests 500ms after you stop typing in Host/Key/ApiSecret."/>
                             </TextBlock>
                         </patterns:InstructionsExpander.Slot>
@@ -115,6 +114,32 @@
                                     Margin="8,0,0,0"/>
                         </StackPanel>
                     </StackPanel>
+
+                    <CheckBox Grid.Row="3"
+                              Style="{StaticResource Styles.ModernCheckBox}"
+                              Content="{loc:LString Key=Settings_Connection_AllowInsecureTls}"
+                              IsChecked="{Binding AllowInsecureTls}"
+                              ToolTip="{loc:LString Key=Settings_Connection_AllowInsecureTlsTooltip}"
+                              Margin="0,16,0,8"/>
+
+                    <!-- Aviso persistente quando a validação TLS está desabilitada -->
+                    <Border Grid.Row="4"
+                            Style="{StaticResource Styles.WarningBox}"
+                            Margin="0,0,0,8"
+                            Visibility="{Binding AllowInsecureTls, Converter={StaticResource BoolToVis}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⚠"
+                                       FontSize="14"
+                                       Foreground="{StaticResource Tokens.Semantic.Warning}"
+                                       Margin="0,0,8,0"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="{loc:LString Key=Settings_Connection_InsecureTlsWarning}"
+                                       Foreground="{StaticResource Tokens.Text.Primary}"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
                 </Grid>
             </TabItem>
 
@@ -138,9 +163,9 @@
                                 <Run Text="2. Edit your API user (or create a dedicated one)."/><LineBreak/>
                                 <Run Text="3. Click 'API keys' tab → '+ Generate new key'."/><LineBreak/>
                                 <Run Text="4. Required permissions:"/><LineBreak/>
-                                <Run Text="     • Firewall Aliases (read/write)"/><LineBreak/>
-                                <Run Text="     • Firewall Rules (read/write)"/><LineBreak/>
-                                <Run Text="     • Firewall Category (read/write)"/><LineBreak/>
+                                <Run Text="     •5 Firewall Aliases (read/write)"/><LineBreak/>
+                                <Run Text="     •5 Firewall Rules (read/write)"/><LineBreak/>
+                                <Run Text="     •5 Firewall Category (read/write)"/><LineBreak/>
                                 <Run Text="5. Click 'Save' — copy both Key and Secret (shown only once)."/><LineBreak/>
                                 <Run Text="6. Paste below, or use 'Import from file' to load the .txt file."/>
                             </TextBlock>
@@ -213,18 +238,40 @@
 
                     <DataGrid x:Name="GatewaysGrid"
                               Grid.Row="1"
-                              Margin="0,16,0,0"
                               Style="{StaticResource Styles.DataGrid}"
+                              Margin="0,16,0,0"
                               ItemsSource="{Binding Gateways}"
                               AutoGenerateColumns="False"
                               HeadersVisibility="Column"
-                              GridLinesVisibility="Horizontal"
                               CanUserAddRows="False" CanUserDeleteRows="False"
-                              SelectionMode="Single" RowHeight="32">
+                              SelectionMode="Single" RowHeight="40">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="{x:Static p:Strings.Settings_Gateways_ColumnDisplayName}"
-                                                Binding="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}"
-                                                Width="*"/>
+                            <DataGridTemplateColumn Header="{x:Static p:Strings.Settings_Gateways_ColumnDisplayName}"
+                                                    Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}"
+                                                 Padding="4,2"
+                                                 FontStyle="Italic"
+                                                 ToolTip="{loc:LString Key=Settings_Gateways_EditDisplayNameToolTip}"
+                                                 VerticalAlignment="Center">
+                                            <TextBox.Style>
+                                                <Style TargetType="TextBox" BasedOn="{StaticResource Styles.ModernTextBox}">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource Tokens.Divider.Default}"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource Tokens.Accent.500}"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBox.Style>
+                                        </TextBox>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="{x:Static p:Strings.Settings_Gateways_ColumnOpnsenseName}"
                                                 Binding="{Binding OpnsenseName}"
                                                 IsReadOnly="True" Width="180"/>
@@ -237,9 +284,8 @@
                                     <DataTemplate>
                                         <Button Style="{StaticResource Styles.Button.Small}"
                                                 Content="{x:Static p:Strings.Settings_Gateways_ResetButton}"
-                                                Command="{Binding DataContext.ResetDisplayNameCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                Command="{Binding DataContext.ResetDisplayNameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"
-                                                ToolTip="{x:Static p:Strings.Settings_Gateways_ResetButtonToolTip}"
                                                 Visibility="{Binding IsCustomized, Converter={StaticResource BoolToVis}}"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
@@ -264,8 +310,7 @@
                                            Foreground="{StaticResource Tokens.Text.Secondary}">
                                     <Run Text="• DSCP pool: range of values to auto-assign when registering new apps."/><LineBreak/>
                                     <Run Text="    Avoid reserved values: 0 (default), 46 (EF), 48–63 (CS/experimental)."/><LineBreak/>
-                                    <Run Text="• Log retention: days to keep %APPDATA%\OptiRoute\OptiRoute.log."/><LineBreak/>
-                                    <Run Text="• Language: requires restart to take effect."/>
+                                    <Run Text="• Log retention: days to keep %APPDATA%\OptiRoute\OptiRoute.log."/>
                                 </TextBlock>
                             </patterns:InstructionsExpander.Slot>
                         </patterns:InstructionsExpander>
@@ -282,25 +327,6 @@
                                   Content="{x:Static p:Strings.Settings_Advanced_ShowTechnical}"
                                   IsChecked="{Binding ShowTechnical}"
                                   Margin="0,0,0,12"/>
-
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                            <TextBlock Text="{x:Static p:Strings.Settings_Advanced_Language}"
-                                       Foreground="{StaticResource Tokens.Text.Dim}"
-                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <ComboBox Style="{StaticResource Styles.ModernComboBox}"
-                                      ItemsSource="{Binding AvailableCultures}"
-                                      SelectedItem="{Binding SelectedCulture}"
-                                      Width="180">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding DisplayName}"/>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <TextBlock Text="(restart required)"
-                                       Foreground="{StaticResource Tokens.Text.Dim}"
-                                       FontStyle="Italic" Margin="8,0,0,0" VerticalAlignment="Center"/>
-                        </StackPanel>
 
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                             <TextBlock Text="{x:Static p:Strings.Settings_Advanced_LogRetention}"
@@ -349,16 +375,18 @@
                            FontSize="14" FontWeight="Bold"
                            Foreground="{Binding TestStatusBrush}"
                            Margin="0,0,8,0" VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding TestStatusText}"
+                <TextBlock Text="{Binding TestStatusDisplay}"
                            Foreground="{Binding TestStatusBrush}"
                            FontWeight="SemiBold" FontSize="12"
                            VerticalAlignment="Center"
+                           TextWrapping="Wrap"
                            ToolTip="{Binding TestStatusTooltip}"/>
             </StackPanel>
 
             <!-- Action buttons -->
             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button Style="{StaticResource Styles.SecondaryButton}"
+                <Button x:Name="CancelButton"
+                        Style="{StaticResource Styles.SecondaryButton}"
                         Content="{x:Static p:Strings.Common_Cancel}"
                         Click="OnCancelClick"
                         Margin="0,0,8,0"/>
@@ -369,4 +397,4 @@
             </StackPanel>
         </Grid>
     </Grid>
-</Window>
+</UserControl>

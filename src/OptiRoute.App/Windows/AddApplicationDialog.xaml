@@ -1,0 +1,189 @@
+<Window x:Class="OptiRoute.App.Windows.AddApplicationDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:loc="clr-namespace:OptiRoute.App.Markup"
+        mc:Ignorable="d"
+        Title="{loc:LString Key=AddApplication_Title}"
+        SizeToContent="Height"
+        Width="500"
+        MinWidth="500"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Background="{StaticResource Tokens.Surface.Window}"
+        Foreground="{StaticResource Tokens.Text.Primary}">
+
+    <Grid Margin="24"
+          FocusManager.FocusedElement="{Binding ElementName=ExecutableBox}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Header -->
+            <RowDefinition Height="Auto"/>  <!-- Executable -->
+            <RowDefinition Height="Auto"/>  <!-- Display name -->
+            <RowDefinition Height="Auto"/>  <!-- Currently running -->
+            <RowDefinition Height="Auto"/>  <!-- Gateway -->
+            <RowDefinition Height="Auto"/>  <!-- Footer -->
+        </Grid.RowDefinitions>
+
+        <!-- ══ Header ═══════════════════════════════════════════════════════ -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="{loc:LString Key=AddApplication_Title}"
+                       FontSize="20" FontWeight="Bold"
+                       Foreground="{StaticResource Tokens.Text.Inverse}"/>
+            <TextBlock Text="{loc:LString Key=AddApplication_Subtitle}"
+                       Foreground="{StaticResource Tokens.Text.Dim}"
+                       FontSize="13"
+                       TextWrapping="Wrap"
+                       Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <!-- ══ Executable ═══════════════════════════════════════════════════ -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,16">
+            <TextBlock Text="{loc:LString Key=AddApplication_ExecutableLabel}"
+                       Foreground="{StaticResource Tokens.Text.Dim}"
+                       FontWeight="SemiBold"
+                       FontSize="12"
+                       Margin="0,0,0,6"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="ExecutableBox"
+                         Grid.Column="0"
+                         Style="{StaticResource Styles.ModernTextBox}"
+                         VerticalAlignment="Center"
+                         TextChanged="OnExecutableChanged"/>
+                <Button Grid.Column="1"
+                        Content="{loc:LString Key=AddApplication_BrowseButton}"
+                        Style="{StaticResource Styles.SecondaryButton}"
+                        Click="OnBrowseClick"
+                        VerticalAlignment="Center"
+                        Margin="8,0,0,0"/>
+            </Grid>
+            <TextBlock x:Name="RequiredErrorText"
+                       Text="{loc:LString Key=AddApplication_ExecutableRequired}"
+                       Foreground="{StaticResource Tokens.Semantic.Error}"
+                       FontSize="11"
+                       Margin="0,4,0,0"
+                       Visibility="Collapsed"/>
+        </StackPanel>
+
+        <!-- ══ Display name ═════════════════════════════════════════════════ -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,16">
+            <TextBlock Text="{loc:LString Key=AddApplication_DisplayNameLabel}"
+                       Foreground="{StaticResource Tokens.Text.Dim}"
+                       FontWeight="SemiBold"
+                       FontSize="12"
+                       Margin="0,0,0,6"/>
+            <TextBox x:Name="DisplayNameBox"
+                     Style="{StaticResource Styles.ModernTextBox}"
+                     VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- ══ Currently running ════════════════════════════════════════════ -->
+        <StackPanel Grid.Row="3" Margin="0,0,0,16">
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Text="{loc:LString Key=AddApplication_RunningApps}"
+                           Foreground="{StaticResource Tokens.Text.Dim}"
+                           FontWeight="SemiBold"
+                           FontSize="12"
+                           VerticalAlignment="Center"/>
+                <Button Grid.Column="1"
+                        Content="{loc:LString Key=AddApplication_RefreshButton}"
+                        Style="{StaticResource Styles.Button.Small}"
+                        Click="OnRefreshClick"
+                        VerticalAlignment="Center"/>
+            </Grid>
+            <ComboBox x:Name="RunningAppsBox"
+                      Style="{StaticResource Styles.ModernComboBox}"
+                      MaxDropDownHeight="240"
+                      SelectionChanged="OnRunningAppSelected"
+                      HorizontalContentAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Summary}"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Border x:Name="NoRunningAppsText"
+                    Style="{StaticResource Styles.InfoBox}"
+                    Margin="0,6,0,0"
+                    Visibility="Collapsed">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="ℹ"
+                               FontSize="14"
+                               Foreground="{StaticResource Tokens.Semantic.Info}"
+                               Margin="0,0,8,0"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="{loc:LString Key=AddApplication_NoRunningAppsHint}"
+                               Foreground="{StaticResource Tokens.Text.Secondary}"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- ══ Gateway ══════════════════════════════════════════════════════ -->
+        <StackPanel Grid.Row="4" Margin="0,0,0,24">
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Text="{loc:LString Key=AddApplication_GatewayLabel}"
+                           Foreground="{StaticResource Tokens.Text.Dim}"
+                           FontWeight="SemiBold"
+                           FontSize="12"
+                           VerticalAlignment="Center"/>
+                <Button x:Name="GatewayRefreshButton"
+                        Grid.Column="1"
+                        Content="{loc:LString Key=AddApplication_RefreshButton}"
+                        Style="{StaticResource Styles.Button.Small}"
+                        Click="OnGatewayRefreshClick"
+                        VerticalAlignment="Center"/>
+            </Grid>
+            <ComboBox x:Name="GatewayBox"
+                      Style="{StaticResource Styles.ModernComboBox}"
+                      HorizontalContentAlignment="Stretch"/>
+        </StackPanel>
+
+        <!-- ══ Footer ═══════════════════════════════════════════════════════ -->
+        <Grid Grid.Row="5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Border Grid.Row="0"
+                    BorderBrush="{StaticResource Tokens.Divider.Subtle}"
+                    BorderThickness="0,0,0,1"
+                    Margin="0,0,0,16"/>
+            <StackPanel Grid.Row="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                <Button x:Name="CancelButton"
+                        Content="{loc:LString Key=AddApplication_CancelButton}"
+                        Style="{StaticResource Styles.SecondaryButton}"
+                        Click="OnCancelClick"
+                        MinWidth="90"
+                        Margin="0,0,10,0"/>
+                <Button x:Name="SaveButton"
+                        Content="{loc:LString Key=AddApplication_OkButton}"
+                        Style="{StaticResource Styles.PrimaryButton}"
+                        Click="OnSaveClick"
+                        IsEnabled="False"
+                        ToolTip="{loc:LString Key=AddApplication_ExecutableRequired}"
+                        MinWidth="90"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

@@ -21,7 +21,7 @@
     <value>OptiRoute — Multi-PC WAN Router</value>
   </data>
   <data name="MainWindow.BrandName" xml:space="preserve">
-    <value>⚡ OptiRoute</value>
+    <value>⇄ OptiRoute</value>
   </data>
   <data name="MainWindow.ArchitectureBadge" xml:space="preserve">
     <value>Multi-PC Architecture</value>
@@ -36,7 +36,7 @@
     <value>Refresh</value>
   </data>
   <data name="MainWindow.ApplyRepairButton" xml:space="preserve">
-    <value>✓ Apply changes</value>
+    <value>Apply changes</value>
   </data>
   <data name="MainWindow.RefreshButton.ToolTip" xml:space="preserve">
     <value>Read OPNsense + Windows QoS, build repair plan (does not mutate)</value>
@@ -51,10 +51,10 @@
     <value>Open OptiRoute settings (connection, credentials, gateways, advanced)</value>
   </data>
   <data name="Card.GlobalOnly.Hint" xml:space="preserve">
-    <value>→ Apply via '✓ Apply changes' on the top bar.</value>
+    <value>Apply via the top bar.</value>
   </data>
   <data name="Card.Conflict.Hint" xml:space="preserve">
-    <value>→ Apply via '✓ Apply changes' on the top bar.</value>
+    <value>Apply via the top bar.</value>
   </data>
   <data name="MainWindow.AddApplicationButton" xml:space="preserve">
     <value>+ Add Application</value>
@@ -63,16 +63,56 @@
     <value>Active Gateways:</value>
   </data>
   <data name="MainWindow.EmptyState.Title" xml:space="preserve">
-    <value>No managed applications yet</value>
+    <value>No apps configured yet</value>
   </data>
   <data name="MainWindow.EmptyState.Subtitle" xml:space="preserve">
-    <value>Click the button below to add a game or executable to OptiRoute.</value>
+    <value>Open Settings to add your first application</value>
   </data>
   <data name="MainWindow.EmptyState.AddButton" xml:space="preserve">
     <value>+ Add Application</value>
   </data>
+  <data name="MainWindow.Button.AddFirstApp" xml:space="preserve">
+    <value>+ Add your first app</value>
+  </data>
   <data name="MainWindow.VersionFooter" xml:space="preserve">
     <value>OptiRoute v2.0 (Multi-PC)</value>
+  </data>
+  <data name="MainWindow.SettingsPanel.Title" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="MainWindow.SettingsPanel.FirstRunHint" xml:space="preserve">
+    <value>Welcome! Configure your OPNsense to get started.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Status bar (MainWindow footer) — Phase 2 UX
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="MainWindow.StatusBar.Connected" xml:space="preserve">
+    <value>Connected to OPNsense</value>
+  </data>
+  <data name="MainWindow.StatusBar.Disconnected" xml:space="preserve">
+    <value>Disconnected</value>
+  </data>
+  <data name="MainWindow.StatusBar.Connecting" xml:space="preserve">
+    <value>Connecting…</value>
+  </data>
+  <data name="MainWindow.StatusBar.TlsHint" xml:space="preserve">
+    <value>Consider enabling 'Allow self-signed certificates' if your OPNsense uses one (Settings → Connection)</value>
+  </data>
+  <data name="MainWindow.StatusBar.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="MainWindow.LoadingStage.ReadingRules" xml:space="preserve">
+    <value>Reading OPNsense rules…</value>
+  </data>
+  <data name="MainWindow.LoadingStage.ComparingQos" xml:space="preserve">
+    <value>Comparing with local QoS…</value>
+  </data>
+  <data name="MainWindow.LoadingStage.BuildingPlan" xml:space="preserve">
+    <value>Building plan…</value>
+  </data>
+  <data name="MainWindow.LoadingStage.ApplyingChanges" xml:space="preserve">
+    <value>Applying changes…</value>
   </data>
 
   <!-- ════════════════════════════════════════════════════════════════════
@@ -104,7 +144,7 @@
        Card panels — LocalOnly state
        ════════════════════════════════════════════════════════════════════ -->
   <data name="Card.LocalOnly.Title" xml:space="preserve">
-    <value>⚠ Policy exists only in this Windows</value>
+    <value>Policy exists only in this Windows</value>
   </data>
   <data name="Card.LocalOnly.Subtitle" xml:space="preserve">
     <value>This application has no global rule registered in OPNsense.</value>
@@ -120,10 +160,10 @@
        Card panels — GlobalOnly state
        ════════════════════════════════════════════════════════════════════ -->
   <data name="Card.GlobalOnly.Title" xml:space="preserve">
-    <value>○ Available in OPNsense</value>
+    <value>Available in OPNsense</value>
   </data>
   <data name="Card.GlobalOnly.Subtitle" xml:space="preserve">
-    <value>QoS not yet configured for this game on this computer.</value>
+    <value>QoS not yet configured for this executable on this computer.</value>
   </data>
   <data name="Card.GlobalOnly.ActivateButton" xml:space="preserve">
     <value>Activate on This PC</value>
@@ -133,7 +173,7 @@
        Card panels — Out-of-sync (conflict) state
        ════════════════════════════════════════════════════════════════════ -->
   <data name="Card.Conflict.Title" xml:space="preserve">
-    <value>⚠ DSCP mismatch detected</value>
+    <value>DSCP mismatch detected</value>
   </data>
   <data name="Card.Conflict.Subtitle" xml:space="preserve">
     <value>The local Windows DSCP differs from the global DSCP registered in OPNsense.</value>
@@ -229,6 +269,21 @@
   <data name="Settings.Connection.TestRunning" xml:space="preserve">
     <value>Testing…</value>
   </data>
+  <data name="Settings.Connection.AllowInsecureTls" xml:space="preserve">
+    <value>Allow self-signed certificates (insecure)</value>
+  </data>
+  <data name="Settings.Connection.InsecureTlsWarning" xml:space="preserve">
+    <value>Insecure connection enabled. Your API credentials may be intercepted on untrusted networks.</value>
+  </data>
+  <data name="Settings.Connection.TlsErrorHint.Short" xml:space="preserve">
+    <value>If your OPNsense uses a self-signed certificate, enable 'Allow self-signed certificates' in this section.</value>
+  </data>
+  <data name="Settings.Connection.TlsErrorHint" xml:space="preserve">
+    <value>TLS certificate validation failed. If your OPNsense uses a self-signed certificate, enable 'Allow self-signed certificates' in this section (insecure).</value>
+  </data>
+  <data name="Settings.Connection.AllowInsecureTlsTooltip" xml:space="preserve">
+    <value>Disables TLS certificate validation. Enable only for a self-signed OPNsense certificate on a trusted network — an attacker could otherwise intercept your API credentials (MITM).</value>
+  </data>
 
   <!-- ════════════════════════════════════════════════════════════════════
        Settings window — Credentials tab
@@ -285,8 +340,29 @@
   <data name="Settings.Gateways.WaitingForCredentials" xml:space="preserve">
     <value>Configure credentials to load gateways</value>
   </data>
+  <data name="MainWindow.ToolTip.LanguageSelector" xml:space="preserve">
+    <value>Change UI language</value>
+  </data>
+  <data name="Card.SyncStateBadge.Synchronized" xml:space="preserve">
+    <value>Synchronized</value>
+  </data>
+  <data name="Card.SyncStateBadge.LocalOnly" xml:space="preserve">
+    <value>Local only</value>
+  </data>
+  <data name="Card.SyncStateBadge.GlobalOnly" xml:space="preserve">
+    <value>Globally available</value>
+  </data>
+  <data name="Card.SyncStateBadge.Conflict" xml:space="preserve">
+    <value>DSCP conflict</value>
+  </data>
+  <data name="Card.SyncStateBadge.Unknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
   <data name="Settings.Gateways.ResetButtonToolTip" xml:space="preserve">
     <value>Reset custom display name back to the original OPNsense name</value>
+  </data>
+  <data name="Settings.Gateways.EditDisplayNameToolTip" xml:space="preserve">
+    <value>Click to edit this display name (shown in the OptiRoute UI instead of the OPNsense name)</value>
   </data>
   <data name="Settings.Gateways.Loading" xml:space="preserve">
     <value>Loading gateways from OPNsense…</value>
@@ -368,10 +444,6 @@
   <data name="Settings.Advanced.DscpPoolEnd" xml:space="preserve">
     <value>DSCP pool end:</value>
   </data>
-  <data name="Settings.Advanced.Language" xml:space="preserve">
-    <value>Language:</value>
-  </data>
-
   <!-- ════════════════════════════════════════════════════════════════════
        First-run wizard
        ════════════════════════════════════════════════════════════════════ -->
@@ -480,5 +552,94 @@
   </data>
   <data name="Status.GenericError" xml:space="preserve">
     <value>Error: {0}</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Phase 3 — Diagnostics export, About dialog, Tray (optional)
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="MainWindow.Button.ExportDiagnostics" xml:space="preserve">
+    <value>Export diagnostics</value>
+  </data>
+  <data name="DiagnosticsExport.Success" xml:space="preserve">
+    <value>Diagnostics exported successfully to:
+{0}</value>
+  </data>
+  <data name="DiagnosticsExport.Failed" xml:space="preserve">
+    <value>Failed to export diagnostics: {0}</value>
+  </data>
+
+  <data name="About.Title" xml:space="preserve">
+    <value>About OptiRoute</value>
+  </data>
+  <data name="About.Version" xml:space="preserve">
+    <value>Version {0}</value>
+  </data>
+  <data name="About.Description" xml:space="preserve">
+    <value>Multi-PC DSCP marker for OPNsense + Windows QoS</value>
+  </data>
+  <data name="About.License" xml:space="preserve">
+    <value>License: MIT</value>
+  </data>
+  <data name="About.Repository" xml:space="preserve">
+    <value>Repository</value>
+  </data>
+  <data name="About.Issues" xml:space="preserve">
+    <value>Report an issue</value>
+  </data>
+  <data name="About.Copyright" xml:space="preserve">
+    <value>Copyright © 2026 {0}</value>
+  </data>
+  <data name="About.OkButton" xml:space="preserve">
+    <value>OK</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Add Application dialog (file picker + running process scanner)
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="AddApplication.Title" xml:space="preserve">
+    <value>Add Application</value>
+  </data>
+  <data name="AddApplication.ExecutableLabel" xml:space="preserve">
+    <value>Executable</value>
+  </data>
+  <data name="AddApplication.DisplayNameLabel" xml:space="preserve">
+    <value>Display name</value>
+  </data>
+  <data name="AddApplication.BrowseButton" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="AddApplication.RunningApps" xml:space="preserve">
+    <value>Currently running</value>
+  </data>
+  <data name="AddApplication.NoRunningApps" xml:space="preserve">
+    <value>(none detected)</value>
+  </data>
+  <data name="AddApplication.RefreshButton" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="AddApplication.OkButton" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="AddApplication.CancelButton" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AddApplication.ExecutableRequired" xml:space="preserve">
+    <value>Executable is required</value>
+  </data>
+  <data name="AddApplication.GatewayLabel" xml:space="preserve">
+    <value>Gateway</value>
+  </data>
+  <data name="AddApplication.Subtitle" xml:space="preserve">
+    <value>Pick an executable and choose which WAN to route it through.</value>
+  </data>
+  <data name="AddApplication.NoRunningAppsHint" xml:space="preserve">
+    <value>No applications detected. Click Refresh to scan again.</value>
+  </data>
+
+  <data name="Tray.Menu.Show" xml:space="preserve">
+    <value>Show</value>
+  </data>
+  <data name="Tray.Menu.Quit" xml:space="preserve">
+    <value>Quit</value>
   </data>
 </root>

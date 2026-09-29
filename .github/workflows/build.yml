@@ -1,0 +1,54 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # OptiRoute.App targets net10.0-windows (WPF). Cross-building/test-driving
+      # it from Linux requires EnableWindowsTargeting=true or the SDK fails with
+      # NETSDK1100. OptiRoute.Core stays platform-neutral and tests natively.
+      - name: Restore
+        run: dotnet restore -p:EnableWindowsTargeting=true
+
+      - name: Build (Debug)
+        run: dotnet build -c Debug -p:EnableWindowsTargeting=true
+
+      - name: Test Core
+        run: dotnet test tests/OptiRoute.Core.Tests
+
+      - name: Publish (Release, win-x64 self-contained single file)
+        run: >
+          dotnet publish src/OptiRoute.App
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:EnableWindowsTargeting=true
+          -o artifact
+
+      - name: Package artifact (windows-x64.zip)
+        run: Compress-Archive -Path artifact/* -DestinationPath windows-x64.zip
+        shell: pwsh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: windows-x64.zip
+          if-no-files-found: error

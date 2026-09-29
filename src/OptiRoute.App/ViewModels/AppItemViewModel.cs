@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using OptiRoute.App.Properties;
 using OptiRoute.Core.Interfaces;
 using OptiRoute.Core.Models;
 using ApplicationIdentity = OptiRoute.Core.Models.ApplicationIdentity;
@@ -46,11 +47,11 @@ public sealed class AppItemViewModel : ViewModelBase
 
     public string SyncStateBadge => SyncState switch
     {
-        ApplicationSyncState.Synchronized => "● Sincronizado",
-        ApplicationSyncState.LocalOnly    => "⚠ Somente neste Windows",
-        ApplicationSyncState.GlobalOnly   => "○ Disponível globalmente",
-        ApplicationSyncState.Conflict     => "⚠ Conflito de DSCP",
-        _ => "Desconhecido"
+        ApplicationSyncState.Synchronized => Strings.Card_SyncStateBadge_Synchronized,
+        ApplicationSyncState.LocalOnly    => Strings.Card_SyncStateBadge_LocalOnly,
+        ApplicationSyncState.GlobalOnly   => Strings.Card_SyncStateBadge_GlobalOnly,
+        ApplicationSyncState.Conflict     => Strings.Card_SyncStateBadge_Conflict,
+        _                                => Strings.Card_SyncStateBadge_Unknown
     };
 
     public string DisplayName
