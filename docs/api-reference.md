@@ -1,9 +1,18 @@
 # API and Contracts Reference — OptiRoute
 
+> **Notice (v0.1.x).** The .NET contract snippets in §2 lag behind the current
+> implementation. `IOptiRouteSynchronizer.SyncAsync` now takes an `IPAddress`
+> and an `IProgress<SyncProgress>?` and returns `Task<OptiRouteSyncResult>`
+> (not `SyncResult`). The full pipeline exposes `BuildPlanAsync`,
+> `ApplyPlanAsync`, `VerifyAsync`, and `VerifyRoutesAsync`; this file documents
+> the pre-pipeline shape. A regenerated reference is planned for the v0.2
+> release alongside the multi-PC smoke validation. Until then, treat the code
+> as the source of truth — see `src/OptiRoute.Core/Interfaces/`.
+
 OptiRoute is a self-contained WPF desktop application. It does not run a local HTTP server, does not use ASP.NET Core, and does not open any ports on the host. This reference therefore documents two things:
 
 1. The REST endpoints consumed on OPNsense.
-2. The internal .NET 10 contracts and interfaces.
+2. The internal .NET 10 contracts and interfaces (note the lag above).
 
 ## 1. OPNsense REST API endpoints
 

@@ -6,7 +6,7 @@ on:
       - 'v*.*.*'
 
 permissions:
-  contents: write   # para criar GitHub Release
+  contents: write   # required to create the GitHub Release
 
 jobs:
   release:
@@ -51,12 +51,17 @@ jobs:
         # Publish is per-project, so -r win-x64 is allowed here. We let
         # publish do the build internally (no --no-build) to avoid stale
         # binaries and to mirror the working build.yml approach.
+        # IncludeNativeLibrariesForSelfExtract=true is mandatory: without it
+        # the WPF native DLLs (PresentationNative_cor3, wpfgfx_cor3,
+        # D3DCompiler_47_cor3, vcruntime140_cor3, PenImc_cor3) are dropped
+        # next to OptiRoute.exe and the binary is not actually standalone.
         run: >
           dotnet publish src/OptiRoute.App
           -c Release
           -r win-x64
           --self-contained true
           -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
           -p:EnableWindowsTargeting=true
           -o artifact
 
@@ -71,7 +76,7 @@ jobs:
       - name: Generate release notes from CHANGELOG.md
         id: notes
         run: |
-          # Extrai a seção entre "## [VERSION]" e a próxima "## ["
+          # Extract the section between "## [VERSION]" and the next "## ["
           VERSION="${{ steps.version.outputs.version }}"
           awk -v v="[$VERSION]" '
             $0 ~ "^## " v { flag = 1; next }

@@ -18,8 +18,16 @@ New-NetQosPolicy `
     -Name "OptiRoute-bf6" `
     -AppPathNameMatchCondition "bf6.exe" `
     -DSCPAction 33 `
-    -NetworkProfile All
+    -NetworkProfile All `
+    -PolicyStore ActiveStore
 ```
+
+The `-PolicyStore ActiveStore` flag is mandatory. Without it, `New-NetQosPolicy`
+persists the policy in the local registry as if it were a Group Policy setting
+(Owner = "Group Policy (Machine)"), and only `gpedit.msc` or a scripted
+`Remove-NetQosPolicy -PolicyStore "GPO:$env:COMPUTERNAME"` can remove it later.
+OptiRoute always scopes its policies to `ActiveStore` so they remain removable
+through the standard `Remove-NetQosPolicy` cmdlet.
 
 | Parameter | Example value | Description |
 | --- | --- | --- |
@@ -27,25 +35,28 @@ New-NetQosPolicy `
 | `-AppPathNameMatchCondition` | `bf6.exe` | Executable name, without the full path |
 | `-DSCPAction` | `33` | DSCP code (0 to 63) |
 | `-NetworkProfile` | `All` | Applies to all network profiles (Domain, Private, Public) |
+| `-PolicyStore` | `ActiveStore` | Mandatory. Keeps the policy in the active local store so it stays removable through `Remove-NetQosPolicy` without `gpedit.msc`. |
 
 ### 2.2 Inspect local policies
 
-OptiRoute reads both the DSCP value and the policy metadata (`Owner` and `PolicyStore`):
+OptiRoute reads both the DSCP value and the policy metadata (`Owner` and `PolicyStore`) by scoping the query to `ActiveStore`:
 
 ```powershell
-Get-NetQosPolicy -ErrorAction SilentlyContinue |
+Get-NetQosPolicy -PolicyStore ActiveStore -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -like 'OptiRoute-*' } |
     Select-Object Name, AppPathNameMatchCondition, AppPathName, DSCPAction, DSCPValue, Owner, PolicyStore |
     ConvertTo-Json -Compress
 ```
 
+For diagnostics that need to see policies persisted in a Group Policy store as well (rare, but useful when a previous OptiRoute install was already running before the `-PolicyStore ActiveStore` fix landed), the same query can be issued against `GPO:$env:COMPUTERNAME`. OptiRoute's own listing paths always pass `ActiveStore` first and only fall back to the GPO store when a delete fails.
+
 ### 2.3 Remove a policy safely
 
 ```powershell
-Remove-NetQosPolicy -Name "OptiRoute-bf6" -Confirm:$false -ErrorAction SilentlyContinue
+Remove-NetQosPolicy -Name "OptiRoute-bf6" -PolicyStore ActiveStore -Confirm:$false -ErrorAction SilentlyContinue
 ```
 
-When a policy was created in a specific store (for example `ActiveStore` or a machine GPO), OptiRoute respects the corresponding `-PolicyStore` parameter.
+`OptiRoute.exe` follows up with a verify-after-remove: it re-runs the listing query and, if the policy still exists, retries against `GPO:$env:COMPUTERNAME`. This silent PowerShell behaviour used to leave users with policies that could only be cleared through `gpedit.msc`; the verify step makes that failure mode visible in the UI.
 
 ## 3. Safety rules for orphan policies (`LocalOnly`)
 
@@ -59,9 +70,6 @@ OptiRoute follows three strict rules to avoid interfering with the user's own co
 
 ## 4. Persistence and execution details
 
-- Registry persistence. Policies created by OptiRoute without `-PolicyStore ActiveStore` are persisted in the Windows registry at:
-  ```
-  HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS
-  ```
-  This means the policies stay active across reboots and remain in place after OptiRoute is closed.
+- Registry persistence. Policies are scoped to `-PolicyStore ActiveStore`, so they survive reboots but live in the machine's active policy store rather than the Group Policy registry path (`HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS`). That keeps them removable through `Remove-NetQosPolicy` without needing `gpedit.msc`.
 - Reliable execution without quoting pitfalls. `WindowsQosManager` writes the PowerShell commands to a temporary, cryptographically random `.ps1` file and runs it through `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "<temp>.ps1"`. The script file avoids the quoting failures that are common when arguments are passed directly on the command line.
+- Orphan-script cleanup. On startup, `WindowsQosManager` scans `%TEMP%` for `optiroute_*.ps1` files older than ten minutes and deletes them. The threshold is generous enough to cover in-flight calls but short enough that crashed runs do not leave stray scripts behind.

@@ -2,6 +2,8 @@
 
 OptiRoute routes Windows applications through specific OPNsense WANs using DSCP markers. This folder contains the technical reference for how it works and how to operate it.
 
+For the project overview, latest release, and limitations see the root [`README.md`](../README.md). For what changed in each version, see [`CHANGELOG.md`](../CHANGELOG.md). For how to report a vulnerability, see [`SECURITY.md`](../SECURITY.md).
+
 ## How OptiRoute works
 
 ```
@@ -25,7 +27,7 @@ Windows knows which executable originated each packet. OptiRoute uses that knowl
 | Component | Version |
 | --- | --- |
 | Windows | 10 or 11, x64 |
-| .NET | 10.0 or newer (development only) |
+| .NET | 10.0 SDK 10.0.400 or newer (development only) |
 | OPNsense | 24.x or newer, with API reachable over HTTPS |
 | OPNsense plugin | `os-firewall` (required) |
 | Privileges | Administrator (Windows QoS policy creation requires elevation) |
@@ -41,6 +43,7 @@ Windows knows which executable originated each packet. OptiRoute uses that knowl
 | [`dscp-profiles.md`](dscp-profiles.md) | DSCP pool, DSCP/ToS math, conflict resolution |
 | [`api-reference.md`](api-reference.md) | OPNsense REST endpoints and internal .NET contracts |
 | [`troubleshooting.md`](troubleshooting.md) | Common issues and fixes |
+| [`screenshots/`](screenshots/) | UI screenshots (assets live here; manifest in `screenshots/README.md`) |
 
 ## Source layout
 
@@ -55,6 +58,10 @@ tests/
     OptiRoute.Core.Tests/
     OptiRoute.Windows.Tests/
 ```
+
+> The legacy CLI proof of concept (`src/OptiRoute.Poc/`) and internal-only
+> docs (`docs/design-system.md`, `docs/ux-copy.md`, `docs/smoke-test-checklist.md`,
+> `ROADMAP.md`) are excluded from the public repository via `.gitignore`.
 
 ## Runtime files
 

@@ -6,7 +6,7 @@ In OptiRoute, the **DSCP** (Differentiated Services Code Point) field is used as
 
 ```
 bf6.exe     -> DSCP 33 (network-wide)
-discord.exe -> DSCP 34 (network-wide)
+discord.exe -> DSCP 37 (network-wide)
 steam.exe   -> DSCP 35 (network-wide)
 ```
 
@@ -50,9 +50,9 @@ ToS byte = DSCP << 2 = DSCP * 4
 | --- | --- | --- | --- | --- |
 | default traffic | 0 | `000000` | `0x00` | `ip.dsfield.dscp == 0` |
 | `bf6.exe` | 33 | `100001` | `0x84` | `ip.dsfield.dscp == 33` |
-| `discord.exe` | 34 | `100010` | `0x88` | `ip.dsfield.dscp == 34` |
 | `steam.exe` | 35 | `100011` | `0x8C` | `ip.dsfield.dscp == 35` |
-| `valorant.exe` | 37 | `100101` | `0x94` | `ip.dsfield.dscp == 37` |
+| `discord.exe` | 37 | `100101` | `0x94` | `ip.dsfield.dscp == 37` |
+| `valorant.exe` | 39 | `100111` | `0x9C` | `ip.dsfield.dscp == 39` |
 
 ## 4. Conflict resolution
 

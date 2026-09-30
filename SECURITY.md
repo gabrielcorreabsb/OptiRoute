@@ -4,10 +4,11 @@ OptiRoute configures network routing on the host machine and talks to the OPNsen
 
 ## Supported Versions
 
-OptiRoute is early-stage software. Version **0.1.0 Public Preview** receives security updates. Only the latest released version receives security fixes. There are no long-term support branches.
+OptiRoute is early-stage software. The latest released version receives security updates. There are no long-term support branches.
 
 | Version       | Supported          |
 | ------------- | ------------------ |
+| 0.1.1 Public Preview | :white_check_mark: |
 | 0.1.0 Public Preview | :white_check_mark: |
 | older releases | :x:                |
 
@@ -65,7 +66,7 @@ These are inherent to the design and not bugs:
 
 ### Known security limitations
 
-See the [Known limitations](README.md#known-limitations-v010-public-preview) section in the README for the full list. Highlights relevant to the threat model:
+See the [Known limitations](README.md#known-limitations) section in the README for the full list. Highlights relevant to the threat model:
 
 - API secret is held as a `string` in process memory until the process exits. Memory dumps can recover it.
 - TLS certificate validation is **enabled by default**. Self-signed certificates require explicit opt-in in Settings.
