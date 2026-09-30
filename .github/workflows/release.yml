@@ -30,13 +30,29 @@ jobs:
           echo "version_pretty=v$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Restore
-        run: dotnet restore -p:EnableWindowsTargeting=true
+        run: >
+          dotnet restore
+          -r win-x64
+          -p:EnableWindowsTargeting=true
+          -p:RuntimeIdentifier=win-x64
 
       - name: Build (Release) — produces the artifacts that publish will package
-        run: dotnet build -c Release -p:EnableWindowsTargeting=true --no-restore
+        run: >
+          dotnet build
+          -c Release
+          -r win-x64
+          -p:EnableWindowsTargeting=true
+          -p:RuntimeIdentifier=win-x64
+          --no-restore
 
       - name: Test Core
-        run: dotnet test tests/OptiRoute.Core.Tests -c Release -p:EnableWindowsTargeting=true --no-build
+        run: >
+          dotnet test tests/OptiRoute.Core.Tests
+          -c Release
+          -r win-x64
+          -p:EnableWindowsTargeting=true
+          -p:RuntimeIdentifier=win-x64
+          --no-build
 
       - name: Publish (Release, win-x64 self-contained single file)
         run: >
@@ -46,6 +62,7 @@ jobs:
           --self-contained true
           -p:PublishSingleFile=true
           -p:EnableWindowsTargeting=true
+          -p:RuntimeIdentifier=win-x64
           -o artifact
           --no-build
 
