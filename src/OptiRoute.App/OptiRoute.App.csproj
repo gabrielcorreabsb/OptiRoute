@@ -9,6 +9,11 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
+    <!-- Declares win-x64 as a known RID so dotnet restore on Linux (cross-build)
+         populates project.assets.json with the net10.0-windows/win-x64 target.
+         Without this, publish with no-build fails with NETSDK1047 because the
+         assets file lacks the per-RID target. -->
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <!-- Produce OptiRoute.exe instead of deriving the name from the
          OptiRoute.App project/assembly. -->
     <AssemblyName>OptiRoute</AssemblyName>
