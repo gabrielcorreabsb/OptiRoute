@@ -55,7 +55,7 @@ The published executable is self-contained and requires no separate .NET runtime
 .\publish\OptiRoute.exe
 
 # Or a downloaded release asset:
-.\OptiRoute-v0.1.1.exe
+.\OptiRoute-v0.1.2.exe
 ```
 
 ## Verify connectivity

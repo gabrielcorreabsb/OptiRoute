@@ -6,7 +6,7 @@ Multi-PC WAN routing for Windows + OPNsense.
 
 ## Latest release
 
-**v0.1.1 Public Preview** — single-file `OptiRoute.exe` for Windows 10/11 x64. Download and SHA-256 checksums are on the [GitHub Releases][releases] page. See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
+**v0.1.2 Public Preview** — single-file `OptiRoute.exe` for Windows 10/11 x64. Download and SHA-256 checksums are on the [GitHub Releases][releases] page. See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
 ## Documentation
 
