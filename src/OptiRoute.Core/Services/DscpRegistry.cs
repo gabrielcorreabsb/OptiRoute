@@ -206,11 +206,11 @@ public sealed class DscpRegistry : Interfaces.IDscpRegistry
         if (string.IsNullOrWhiteSpace(exe))
             throw new ArgumentException("Executable name cannot be empty.", nameof(exe));
 
-        // Normaliza separadores de path (\ e /) antes de extrair o file name.
-        // Necessário porque Path.GetFileName só reconhece o separador da plataforma
-        // atual — no Linux, "C:\Games\BF6.exe" viraria a string inteira, gerando
-        // chaves duplicadas para o mesmo executável.
-        var normalized = exe.Replace('/', '\\');
-        return Path.GetFileName(normalized).Trim().ToLowerInvariant();
+        // Extrai o último segmento após \ ou /. Path.GetFileName só reconhece
+        // o separador da plataforma atual — no Linux, "C:\Games\BF6.exe"
+        // voltaria inteiro, gerando chaves duplicadas para o mesmo executável.
+        var lastSep = exe.LastIndexOfAny(new[] { '\\', '/' });
+        var fileName = lastSep >= 0 ? exe[(lastSep + 1)..] : exe;
+        return fileName.Trim().ToLowerInvariant();
     }
 }
