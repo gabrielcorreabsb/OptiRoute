@@ -29,32 +29,28 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "version_pretty=v$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Restore
-        run: >
-          dotnet restore
-          -r win-x64
-          -p:EnableWindowsTargeting=true
-          -p:RuntimeIdentifier=win-x64
-
-      - name: Build (Release) — produces the artifacts that publish will package
-        run: >
-          dotnet build
-          -c Release
-          -r win-x64
-          -p:EnableWindowsTargeting=true
-          -p:RuntimeIdentifier=win-x64
-          --no-restore
+      - name: Restore (solution-wide, no RID)
+        # Solution-wide restore is fine with -p:EnableWindowsTargeting=true.
+        # The RuntimeIdentifiers=win-x64 declared in OptiRoute.App.csproj makes
+        # restore populate project.assets.json with the net10.0-windows/win-x64
+        # target, which the per-project publish step below needs.
+        run: dotnet restore -p:EnableWindowsTargeting=true
 
       - name: Test Core
+        # dotnet test on a specific project does not require a RID, so this
+        # avoids NETSDK1134 ("Building a solution with a specific
+        # RuntimeIdentifier is not supported"). The Core tests are
+        # platform-neutral and run natively on the Linux runner.
         run: >
           dotnet test tests/OptiRoute.Core.Tests
           -c Release
-          -r win-x64
           -p:EnableWindowsTargeting=true
-          -p:RuntimeIdentifier=win-x64
-          --no-build
+          --no-restore
 
       - name: Publish (Release, win-x64 self-contained single file)
+        # Publish is per-project, so -r win-x64 is allowed here. We let
+        # publish do the build internally (no --no-build) to avoid stale
+        # binaries and to mirror the working build.yml approach.
         run: >
           dotnet publish src/OptiRoute.App
           -c Release
@@ -62,9 +58,7 @@ jobs:
           --self-contained true
           -p:PublishSingleFile=true
           -p:EnableWindowsTargeting=true
-          -p:RuntimeIdentifier=win-x64
           -o artifact
-          --no-build
 
       - name: Rename binary to include version
         run: mv artifact/OptiRoute.exe artifact/OptiRoute-${{ steps.version.outputs.version_pretty }}.exe
