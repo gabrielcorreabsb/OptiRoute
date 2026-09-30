@@ -71,6 +71,10 @@ See the [Known limitations](README.md#known-limitations-v010-public-preview) sec
 - TLS certificate validation is **enabled by default**. Self-signed certificates require explicit opt-in in Settings.
 - Diagnostics exports are sanitized: Basic/Bearer authorization headers, URL userinfo, and the OPNsense host are redacted. Always review the export before sharing.
 
+### Unsigned binary and SmartScreen
+
+The Windows executable published in GitHub Releases is not digitally signed. SmartScreen therefore flags the file as coming from an unknown publisher on first run. This is a usability friction, not a security defect: the binary hash in `OptiRoute.exe.sha256` matches the file you downloaded, the TLS validation and DPAPI protections still apply, and the SmartScreen prompt can be bypassed by clicking **More info** → **Run anyway**. Code signing from a trusted CA is on the roadmap for a later release once the project has the funding or sponsorship to cover the certificate cost.
+
 ## Out of Scope
 
 - Misconfiguration of the user's own OPNsense firewall rules.

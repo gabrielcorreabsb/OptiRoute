@@ -29,6 +29,14 @@
     <!-- WinForms apenas para o NotifyIcon do tray opcional (Phase 3). -->
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Single-file: empacota o runtime inteiro em OptiRoute.exe.
+         Sem IncludeNativeLibrariesForSelfExtract=true, as DLLs nativas do
+         WPF (PresentationNative_cor3, wpfgfx_cor3, D3DCompiler_47_cor3,
+         vcruntime140_cor3, PenImc_cor3) ficam soltas ao lado do .exe e o
+         app só roda se a pasta inteira for distribuída. -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <SelfContained>true</SelfContained>
   </PropertyGroup>
 
   <ItemGroup>
