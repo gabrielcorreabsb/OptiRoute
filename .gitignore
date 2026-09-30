@@ -116,6 +116,32 @@ config.local.json
 *.pdb
 *.deps.json
 
+# ────────────────────────────────────────────────────────────────────────────
+# Work-in-progress and internal documentation (not public yet)
+# ────────────────────────────────────────────────────────────────────────────
+
+# Designer brief for visual tokens / components — pending implementation
+/docs/design-system.md
+
+# UX copy contract — pending designer review (Phase 0)
+/docs/ux-copy.md
+
+# Manual smoke-test procedure — already executed (see ROADMAP.md history)
+/docs/smoke-test-checklist.md
+
+# Internal execution history / diary — replace with public roadmap when rewritten
+/ROADMAP.md
+
+# ────────────────────────────────────────────────────────────────────────────
+# Superseded source — to be removed
+# ────────────────────────────────────────────────────────────────────────────
+
+# PoC CLI: superseded by the WPF App (see ROADMAP.md §1, Phase 0)
+/src/OptiRoute.Poc/
+
+# Stub file from `dotnet new` template — to be deleted
+/src/OptiRoute.Core/Class1.cs
+
 # ════════════════════════════════════════════════════════════════════════════
 # Misc
 # ════════════════════════════════════════════════════════════════════════════

@@ -1,61 +1,63 @@
-# Registro DSCP e Mapeamento de Identidade no OptiRoute
+# DSCP Registry and Identity Mapping in OptiRoute
 
-## 1. Princípio Fundamental: DSCP como Identidade do Aplicativo
+## 1. Core principle: DSCP as application identity
 
-No OptiRoute, o campo **DSCP (Differentiated Services Code Point)** é utilizado como **identificador unívoco e global do processo executável** em toda a rede local, e **não** como representação fixa de um gateway de saída.
+In OptiRoute, the **DSCP** (Differentiated Services Code Point) field is used as a **unique, network-wide identifier of the executable process**, not as a fixed representation of an egress gateway.
 
-```text
-bf6.exe     ↔ DSCP 33 (global)
-discord.exe ↔ DSCP 34 (global)
-steam.exe   ↔ DSCP 35 (global)
+```
+bf6.exe     -> DSCP 33 (network-wide)
+discord.exe -> DSCP 34 (network-wide)
+steam.exe   -> DSCP 35 (network-wide)
 ```
 
-### Por que esse modelo é superior?
-1. **Multi-PC sem Colisão:** Se dois computadores na casa executarem `bf6.exe`, ambos marcarão seus pacotes com DSCP 33. O OPNsense pode aplicar a rota padrão global para ambos, ou aplicar um override individual para um deles baseado no IP de origem (`Source IP`).
-2. **Independência de Rota:** Mudar a rota do jogo de `WAN1` para `WAN2` no OPNsense **não exige** recriar a política QoS no Windows ou alterar o DSCP da aplicação. A identidade do processo permanece estável.
-3. **Escalabilidade:** O firewall passa a ter regras expressivas onde o DSCP identifica a aplicação e o `Source IP` diferencia os clientes da rede.
+This model has three benefits:
 
----
+1. Multi-PC without collision. If two PCs on the same network both run `bf6.exe`, both mark their packets with DSCP 33. OPNsense can apply the global route to both, or apply a per-host override based on `Source IP`.
+2. Route independence. Switching the game's route from `WAN1` to `WAN2` on OPNsense does not require recreating the Windows QoS policy or changing the application's DSCP. The process identity stays stable.
+3. Scalability. Firewall rules become expressive: the DSCP identifies the application, and `Source IP` distinguishes clients.
 
-## 2. Pool de DSCPs Gerenciados (`ManagedPool`)
+## 2. Managed DSCP pool
 
-O DSCP é um campo de 6 bits (valores de `0` a `63`). O OptiRoute aloca dinamicamente os valores através da classe `DscpRegistry`, que gerencia um pool seguro e previne colisões com o tráfego padrão de rede.
+DSCP is a 6-bit field (values from `0` to `63`). OptiRoute allocates values dynamically through the `DscpRegistry` class, which maintains a safe pool and prevents collisions with standard network traffic.
 
-### 2.1 Valores Reservados (Excluídos do Pool)
-- **`DSCP 0` (Best Effort / CS0):** Tráfego comum de internet (sem política).
-- **`DSCP 46` (Expedited Forwarding - EF):** Reservado para tráfego sensível à latência como VoIP/Telefonia.
-- **Classes Padrão IETF (CS e AF):**
-  - CS1 a CS7 (`8, 16, 24, 32, 40, 48, 56`)
-  - AF1x a AF4x (`10, 12, 14, 18, 20, 22, 26, 28, 30, 34, 36, 38`)
+### 2.1 Reserved values (excluded from the pool)
 
-### 2.2 Pool Padrão do OptiRoute
-O OptiRoute prioriza valores não conflitantes:
-$$\text{Pool Sugerido} = [33, 35, 37, 39, 41, 42, 43, 44, 45, 47, 49, 50, 51, \dots, 62]$$
+- `DSCP 0` (Best Effort / CS0): ordinary internet traffic without policy.
+- `DSCP 46` (Expedited Forwarding, EF): reserved for latency-sensitive traffic such as VoIP.
+- Standard IETF classes:
+  - CS1 through CS7 (`8, 16, 24, 32, 40, 48, 56`)
+  - AF1x through AF4x (`10, 12, 14, 18, 20, 22, 26, 28, 30, 34, 36, 38`)
 
----
+### 2.2 Default OptiRoute pool
 
-## 3. Relação Matemática entre DSCP e ToS (Type of Service)
+OptiRoute prefers non-conflicting values:
 
-No cabeçalho IPv4, os 6 bits de maior ordem do byte ToS contêm o DSCP, enquanto os 2 bits inferiores são reservados para ECN (Explicit Congestion Notification):
+```
+Pool = [33, 35, 37, 39, 41, 42, 43, 44, 45, 47, 49, 50, 51, ..., 62]
+```
 
-$$\text{ToS Byte} = \text{DSCP} \ll 2 = \text{DSCP} \times 4$$
+## 3. Mathematical relationship between DSCP and ToS
 
-### Tabela de Referência Rápida
+In the IPv4 header, the 6 most significant bits of the ToS byte hold the DSCP, and the 2 least significant bits are reserved for ECN (Explicit Congestion Notification):
 
-| Executável (Exemplo) | DSCP (Decimal) | DSCP (Binário) | ToS Byte (Hex) | Filtro Wireshark / Pcap |
-|---|---|---|---|---|
-| *Tráfego Padrão* | 0 | `000000` | `0x00` | `ip.dsfield.dscp == 0` |
+```
+ToS byte = DSCP << 2 = DSCP * 4
+```
+
+### Quick reference table
+
+| Executable (example) | DSCP (decimal) | DSCP (binary) | ToS byte (hex) | Wireshark / pcap filter |
+| --- | --- | --- | --- | --- |
+| default traffic | 0 | `000000` | `0x00` | `ip.dsfield.dscp == 0` |
 | `bf6.exe` | 33 | `100001` | `0x84` | `ip.dsfield.dscp == 33` |
 | `discord.exe` | 34 | `100010` | `0x88` | `ip.dsfield.dscp == 34` |
 | `steam.exe` | 35 | `100011` | `0x8C` | `ip.dsfield.dscp == 35` |
 | `valorant.exe` | 37 | `100101` | `0x94` | `ip.dsfield.dscp == 37` |
 
----
+## 4. Conflict resolution
 
-## 4. Resolução de Conflitos (`Conflict Resolution`)
+When one machine has a legacy Windows policy that marks `bf6.exe` with DSCP 33, but another user on the network registered `bf6.exe` on OPNsense as DSCP 35:
 
-Se um computador local tiver uma política legada no Windows configurando `bf6.exe` com DSCP 33, mas outro usuário na rede cadastrou `bf6.exe` no OPNsense como DSCP 35:
-
-1. O `OptiRouteSynchronizer` detecta o estado `ApplicationSyncState.Conflict`.
-2. A interface gráfica destaca o card com a cor vermelha e o aviso **`⚠ Divergência de DSCP detectada`**.
-3. O usuário pode clicar em **`Corrigir para DSCP Global`**, que automaticamente reconfigura a política local do Windows para o DSCP oficial registrado no firewall (`35`), restabelecendo a harmonia em toda a rede.
+1. `OptiRouteSynchronizer` detects the `ApplicationSyncState.Conflict` state.
+2. The UI highlights the card in red with the message `DSCP mismatch detected`.
+3. The user clicks `Repair to global DSCP`, which automatically reconfigures the local Windows policy to the official DSCP registered on the firewall (`35`) and restores consistency across the network.
