@@ -1,0 +1,37 @@
+name: Feature Request
+description: Sugerir nova funcionalidade para o OptiRoute
+title: "[Feature] "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use case
+      placeholder: What problem does this solve? Who benefits?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Estimated scope
+      options:
+        - Small (< 1 day)
+        - Medium (1-3 days)
+        - Large (> 3 days)
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission
+      options:
+        - label: I searched existing feature requests to avoid duplicates
+          required: true

@@ -1,11 +1,14 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Security.Principal;
 using System.Windows;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OptiRoute.App.Logging;
 using OptiRoute.App.Services;
 using OptiRoute.App.ViewModels;
+using OptiRoute.App.Windows;
 using OptiRoute.Core.Interfaces;
 using OptiRoute.Core.Services;
 using OptiRoute.OPNsense.Client;
@@ -127,7 +130,11 @@ public partial class App : Application
             {
                 Host         = config.OpnsenseHost,
                 ApiKey       = creds?.ApiKey ?? string.Empty,
-                VerifyTls    = false,
+                // TLS é decidido pela preferência do usuário persistida em config.json.
+                // O default de fábrica de OpnsenseSettings.VerifyTls é false (dev/self-signed),
+                // mas o App SEMPRE sobrescreve aqui: validação ligada salvo quando o usuário
+                // habilitou explicitamente "Allow self-signed certificates".
+                VerifyTls    = !config.AllowInsecureTls,
                 LanInterface = config.LanInterface
             };
 
@@ -150,7 +157,7 @@ public partial class App : Application
             Trace("creating WindowsQosManager");
             var qosManager     = new WindowsQosManager(loggerFactory.CreateLogger<WindowsQosManager>());
             Trace("creating managers (dscp/order/override/synchronizer)");
-            var dscpRegistry   = new DscpRegistry();
+            var dscpRegistry   = new DscpRegistry(config.DscpPoolStart, config.DscpPoolEnd);
             var orderManager   = new RuleOrderManager(opnClient, loggerFactory.CreateLogger<RuleOrderManager>());
             var overrideManager = new HostOverrideManager(
                 opnClient, dscpRegistry, orderManager, loggerFactory.CreateLogger<HostOverrideManager>());
@@ -165,6 +172,43 @@ public partial class App : Application
                                     ?? mainVm.AvailableCultures.FirstOrDefault(c => c.Code == "en-US")
                                     ?? mainVm.AvailableCultures.First();
 
+            // ─── G16: aviso de IP local dinâmico ──────────────────────────────
+            // Compara o IP detectado agora com o snapshot gravado na última execução.
+            // Se mudou (ex.: renovação de lease DHCP), exibe um banner NÃO bloqueante
+            // na MainWindow para o usuário revisar a configuração no OPNsense.
+            // Best-effort: qualquer falha é logada e nunca impede o startup.
+            Trace("evaluating local IP change (G16)");
+            try
+            {
+                var ipLogger   = loggerFactory.CreateLogger("OptiRoute.App.LocalIpChange");
+                var snapshotIp = LocalNetworkDetector.ReadSnapshot();
+                var currentIp  = LocalNetworkDetector
+                    .DetectAsync(config.OpnsenseHost)
+                    .GetAwaiter().GetResult()
+                    .ToString();
+
+                if (!string.IsNullOrEmpty(snapshotIp)
+                    && !string.IsNullOrEmpty(currentIp)
+                    && !string.Equals(snapshotIp, currentIp, StringComparison.Ordinal))
+                {
+                    mainVm.SetIpChangeBanner(snapshotIp, currentIp);
+                    ipLogger.LogWarning(
+                        "Local IP changed: previous={Snapshot}, current={Current}. Verify the configuration on OPNsense.",
+                        snapshotIp, currentIp);
+                }
+                else if (!string.IsNullOrEmpty(currentIp))
+                {
+                    LocalNetworkDetector
+                        .SaveSnapshotAsync(currentIp, ipLogger)
+                        .GetAwaiter().GetResult();
+                }
+            }
+            catch (Exception ex)
+            {
+                loggerFactory.CreateLogger("OptiRoute.App.LocalIpChange")
+                    .LogWarning(ex, "Failed to evaluate the local IP change banner.");
+            }
+
             Trace("creating MainWindow");
             var mainWindow = new MainWindow(mainVm);
             // Force visible position: quando o user lança via PowerShell/cmd, a MainWindow
@@ -176,6 +220,31 @@ public partial class App : Application
             if (mainWindow.Left < 0) mainWindow.Left = 0;
             if (mainWindow.Top < 0) mainWindow.Top = 0;
             mainWindow.ShowInTaskbar = true;
+
+            // ─── Verificação de privilégios administrativos ───────────────
+            // Roda DEPOIS de a MainWindow ser instanciada (ela vira Application.MainWindow;
+            // ShutdownMode=OnMainWindowClose — se o dialog fosse o primeiro Window, fechá-lo
+            // encerraria o app). O manifest normalmente já pede requireAdministrator, mas
+            // quando o processo roda sem elevação (ex.: host que ignora o manifest) as
+            // operações de QoS/firewall falham silenciosamente. Oferece reiniciar elevado.
+            Trace("checking administrator elevation");
+            if (!IsRunningAsAdministrator())
+            {
+                var adminDialog = new AdminElevationDialog();
+                adminDialog.ShowDialog();
+
+                if (adminDialog.RestartRequested
+                    && RestartElevated(loggerFactory.CreateLogger("OptiRoute.App.AdminElevation")))
+                {
+                    Trace("admin elevation: relaunched elevated — shutting down current instance");
+                    Shutdown(0);
+                    return;
+                }
+
+                loggerFactory.CreateLogger("OptiRoute.App.AdminElevation")
+                    .LogWarning("Running without Administrator privileges — Windows QoS changes may fail.");
+            }
+
             Trace("MainWindow.Show()");
             mainWindow.Show();
             mainWindow.Activate();
@@ -204,6 +273,46 @@ public partial class App : Application
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Error);
             Shutdown();
+        }
+    }
+
+    /// <summary>
+    /// True quando o processo atual está elevado (token de Administrador). Usa
+    /// <see cref="WindowsIdentity.GetCurrent"/> + <see cref="WindowsPrincipal"/>.
+    /// </summary>
+    private static bool IsRunningAsAdministrator()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+    }
+
+    /// <summary>
+    /// Relança o executável atual com elevação (UAC). Retorna true em sucesso (o chamador
+    /// deve encerrar esta instância); false se o usuário recusou o UAC ou o relaunch falhou
+    /// — nesse caso o log registra a causa e o app continua sem privilégios.
+    /// </summary>
+    private static bool RestartElevated(ILogger logger)
+    {
+        try
+        {
+            var exePath = Environment.ProcessPath
+                          ?? Process.GetCurrentProcess().MainModule?.FileName;
+            if (string.IsNullOrWhiteSpace(exePath))
+                throw new InvalidOperationException("Cannot determine the executable path.");
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName        = exePath,
+                UseShellExecute = true,
+                Verb            = "runas"
+            });
+            return true;
+        }
+        catch (Exception ex)
+        {
+            // UAC recusado (Win32Exception) ou falha ao lançar: continua sem elevação.
+            logger.LogWarning(ex, "Elevated relaunch failed — continuing without Administrator privileges.");
+            return false;
         }
     }
 }

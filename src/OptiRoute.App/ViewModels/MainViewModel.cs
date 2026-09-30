@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Windows;
@@ -152,6 +153,29 @@ public sealed class MainViewModel : ViewModelBase
         set => SetField(ref _isConnected, value);
     }
 
+    private string? _ipChangeBannerMessage;
+
+    /// <summary>
+    /// Mensagem do banner de aviso (não bloqueante) exibido quando o IP local detectado
+    /// no startup difere do snapshot da última execução (ex.: renovação de lease DHCP).
+    /// Nulo/vazio = nenhum banner visível.
+    /// </summary>
+    public string? IpChangeBannerMessage
+    {
+        get => _ipChangeBannerMessage;
+        private set
+        {
+            if (SetField(ref _ipChangeBannerMessage, value))
+                OnPropertyChanged(nameof(HasIpChangeBanner));
+        }
+    }
+
+    /// <summary>Conveniência para o binding de visibilidade do banner de mudança de IP.</summary>
+    public bool HasIpChangeBanner => !string.IsNullOrEmpty(_ipChangeBannerMessage);
+
+    /// <summary>Dispensa o banner de mudança de IP (botão ✕).</summary>
+    public ICommand DismissIpChangeBannerCommand { get; }
+
     private bool _isSettingsPanelVisible;
 
     /// <summary>
@@ -260,6 +284,9 @@ public sealed class MainViewModel : ViewModelBase
     /// <summary>Gera um arquivo de diagnóstico sanitizado (logs + sistema + config, sem segredos).</summary>
     public ICommand ExportDiagnosticsCommand { get; }
 
+    /// <summary>Abre no Explorer a pasta de dados locais (<c>%APPDATA%\OptiRoute</c>), onde ficam os logs.</summary>
+    public ICommand OpenLogFolderCommand { get; }
+
     /// <summary>Abre o modal "About" centralizado na MainWindow.</summary>
     public ICommand ShowAboutCommand { get; }
 
@@ -305,8 +332,10 @@ public sealed class MainViewModel : ViewModelBase
         ApplyRepairCommand       = new AsyncRelayCommand(ApplyRepairAsync, () => HasPendingRepair);
         OpenSettingsCommand      = new RelayCommand(OpenSettings);
         ExportDiagnosticsCommand = new RelayCommand(ExportDiagnostics);
+        OpenLogFolderCommand     = new RelayCommand(OpenLogFolder);
         ShowAboutCommand         = new RelayCommand(ShowAbout);
         CancelSyncCommand        = new RelayCommand(CancelSync);
+        DismissIpChangeBannerCommand = new RelayCommand(DismissIpChangeBanner);
 
         var config = AppConfigManager.Load();
         _opnsenseHost = config.OpnsenseHost;
@@ -809,6 +838,19 @@ public sealed class MainViewModel : ViewModelBase
         ProgressPercent = 0;
     }
 
+    // ── G16: banner de mudança de IP local ──────────────────────────────────
+
+    /// <summary>
+    /// Define o banner não bloqueante de mudança de IP local. Chamado pelo
+    /// <c>App.OnStartup</c> quando o snapshot do IP (última execução) difere do IP
+    /// detectado no startup atual. <paramref name="configuredIp"/> é o valor
+    /// anteriormente conhecido e <paramref name="currentIp"/> o detectado agora.
+    /// </summary>
+    public void SetIpChangeBanner(string configuredIp, string currentIp)
+        => IpChangeBannerMessage = Strings.Banner_IpChange_Message(configuredIp, currentIp);
+
+    private void DismissIpChangeBanner() => IpChangeBannerMessage = null;
+
     // ── Phase 3: Diagnostics export ─────────────────────────────────────────
 
     /// <summary>
@@ -851,6 +893,33 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
+    // ── Phase 4: Open log folder ────────────────────────────────────────────
+
+    /// <summary>
+    /// Abre no Explorer a pasta de dados locais (<c>%APPDATA%\OptiRoute</c>) — onde
+    /// ficam o <c>OptiRoute.log</c>, o <c>config.json</c> e as credenciais. Cria o
+    /// diretório se ainda não existir (first run). Falhas viram mensagem de status.
+    /// </summary>
+    private void OpenLogFolder()
+    {
+        try
+        {
+            var path = AppConfigManager.LogFolderPath;
+            Directory.CreateDirectory(path);
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true,
+            });
+            _logger.LogInformation("Opened log folder: {Path}", path);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to open log folder");
+            StatusMessage = Strings.Status_OpenLogFolderFailed;
+        }
+    }
+
     // ── Phase 3: About dialog ───────────────────────────────────────────────
 
     private void ShowAbout()
@@ -888,6 +957,14 @@ public sealed class MainViewModel : ViewModelBase
 
         _trayIcon = new TrayIcon(mainWindow);
         _trayIcon.ShowRequested += (_, _) => RestoreMainWindow(mainWindow);
+        _trayIcon.SyncRequested += async (_, _) =>
+        {
+            // Ignora se já houver sincronização em andamento (defesa em profundidade:
+            // o próprio AsyncRelayCommand também bloqueia reentrância).
+            if (IsLoading)
+                return;
+            await SyncAsync();
+        };
         _trayIcon.QuitRequested += (_, _) =>
         {
             IsExplicitShutdown = true;
@@ -982,16 +1059,29 @@ public sealed class MainViewModel : ViewModelBase
     /// </summary>
     private async Task ApplyRepairAsync()
     {
-        if (!LatestPlan.HasActions)
+        if (LatestPlan is null || !LatestPlan.HasActions)
         {
             StatusMessage = Strings.Status_NothingToRepair;
             return;
         }
 
+        // Confirmação explícita antes de mutar QoS local / firewall OPNsense.
+        // Sem confirmação, o botão "Aplicar reparo" fica inerte.
+        var dialog = new ConfirmApplyDialog(LatestPlan.Actions)
+        {
+            Owner = Application.Current.MainWindow,
+        };
+        if (dialog.ShowDialog() != true)
+        {
+            StatusMessage = Strings.Status_ApplyRepair_Cancelled;
+            return;
+        }
+
         IsLoading = true;
         StatusMessage = LoadingStages[3]; // "Applying changes..."
-        var applied = 0;
-        var errors  = 0;
+        var applied  = 0;
+        var errors   = 0;
+        var failures = new List<ReconciliationActionFailure>();
 
         try
         {
@@ -1026,7 +1116,10 @@ public sealed class MainViewModel : ViewModelBase
                             if (result.AllSucceeded)
                                 applied++;
                             else
+                            {
                                 errors++;
+                                failures.AddRange(result.Failures);
+                            }
                             break;
 
                         // Os demais tipos (CreateFirewallRule / UpdateFirewallRule /
@@ -1043,6 +1136,7 @@ public sealed class MainViewModel : ViewModelBase
                 catch (Exception ex)
                 {
                     errors++;
+                    failures.Add(new ReconciliationActionFailure(action, ex.Message));
                     _logger.LogError(ex,
                         "Falha ao aplicar ação {Type} para '{Exe}'",
                         action.Type, action.Executable);
@@ -1053,9 +1147,28 @@ public sealed class MainViewModel : ViewModelBase
             // (deve ficar vazio se as mutações foram bem-sucedidas).
             await SyncAsync();
 
-            StatusMessage = errors == 0
+            // G7 — Verify Route pós-Apply: re-lê o estado e propaga ✓/⚠ por app.
+            var verifySuffix = await VerifyRoutesAsync();
+
+            // G4 — falhas parciais do Apply precisam ficar visíveis ao usuário.
+            // Abre um dialog modal listando cada ReconciliationActionFailure com
+            // Executable + Type + Reason, e botões "Copy details" / "Open log folder" / "Close".
+            if (failures.Count > 0)
+            {
+                var failuresDialog = new ApplyFailuresDialog(failures, applied)
+                {
+                    Owner = Application.Current.MainWindow,
+                };
+                failuresDialog.ShowDialog();
+            }
+
+            var baseMessage = errors == 0
                 ? Strings.Status_ApplySuccess(applied)
                 : Strings.Status_ApplyPartialFailure(applied, errors);
+
+            StatusMessage = verifySuffix is null
+                ? baseMessage
+                : $"{baseMessage} · {verifySuffix}";
         }
         catch (Exception ex)
         {
@@ -1065,6 +1178,46 @@ public sealed class MainViewModel : ViewModelBase
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// G7: re-lê o estado via <see cref="IOptiRouteSynchronizer.VerifyRoutesAsync"/> e
+    /// propaga o resultado por-app aos cards (<see cref="AppItemViewModel.ApplyVerification"/>).
+    /// Retorna o sufixo de status ("Verify: ✓ N ok" / "Verify: ⚠ N issues") ou <c>null</c>
+    /// quando a verificação em si falhou (a UI mantém a mensagem base).
+    /// </summary>
+    private async Task<string?> VerifyRoutesAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var verifications = await _synchronizer.VerifyRoutesAsync(_currentHostIp, ct);
+
+            var byExe = verifications.ToDictionary(
+                v => v.Executable, StringComparer.OrdinalIgnoreCase);
+
+            var okCount   = 0;
+            var issueCount = 0;
+            foreach (var app in Applications)
+            {
+                if (!byExe.TryGetValue(app.Executable, out var v))
+                    continue;
+
+                app.ApplyVerification(v);
+                if (v.FailureReason is null)
+                    okCount++;
+                else
+                    issueCount++;
+            }
+
+            return issueCount == 0
+                ? $"Verify: ✓ {okCount} ok"
+                : $"Verify: ⚠ {issueCount} issues";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Falha na verificação pós-Apply (VerifyRoutes)");
+            return null;
         }
     }
 

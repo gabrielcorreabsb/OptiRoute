@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Net.Http;
+using System.Security.Authentication;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -9,9 +11,11 @@ using System.Windows.Threading;
 using Microsoft.Win32;
 using OptiRoute.App.Properties;
 using OptiRoute.App.Services;
+using OptiRoute.App.Windows;
 using OptiRoute.Core.Interfaces;
 using OptiRoute.OPNsense.Client;
 using OptiRoute.Windows.Security;
+using OptiRoute.Windows.Startup;
 
 namespace OptiRoute.App.ViewModels;
 
@@ -86,6 +90,11 @@ public sealed class SettingsViewModel : ViewModelBase
         {
             if (p is GatewayDisplayName g) g.Reset();
         });
+        // Botão inline exibido quando o auto-test falha por TLS: aceita o cert
+        // autoassinado e re-agenda o teste (o setter de AllowInsecureTls chama ScheduleAutoTest).
+        AllowSelfSignedCommand = new RelayCommand(() => AllowInsecureTls = true);
+        // Reset destrutivo: confirma via modal, apaga config/credenciais e reinicia o app.
+        ResetDefaultsCommand = new RelayCommand(ResetToDefaults);
     }
 
     // ── Connection tab ───────────────────────────────────────────────────
@@ -139,11 +148,43 @@ public sealed class SettingsViewModel : ViewModelBase
                 ScheduleAutoTest();
                 // O hint TLS inline some quando o toggle é habilitado.
                 OnPropertyChanged(nameof(TestStatusDisplay));
+                // O botão "Allow self-signed" some quando o toggle é habilitado.
+                OnPropertyChanged(nameof(ShowAllowSelfSignedButton));
             }
         }
     }
 
+    /// <summary>
+    /// Comando do botão inline "Allow self-signed" (visível em falha TLS). Ao habilitar
+    /// <see cref="AllowInsecureTls"/> o setter re-agenda o auto-test automaticamente.
+    /// </summary>
+    public ICommand AllowSelfSignedCommand { get; }
+
+    /// <summary>
+    /// Versão do OPNsense lida de <c>/api/core/firmware/info</c> logo após uma conexão
+    /// bem-sucedida. <c>null</c> enquanto não houver conexão válida ou se a leitura falhar.
+    /// </summary>
+    private string? _opnsenseVersion;
+    public string? OpnsenseVersion
+    {
+        get => _opnsenseVersion;
+        private set
+        {
+            if (SetField(ref _opnsenseVersion, value))
+                OnPropertyChanged(nameof(HasOpnsenseVersion));
+        }
+    }
+
+    /// <summary>True quando a versão do OPNsense foi lida com sucesso (para fallback de UI).</summary>
+    public bool HasOpnsenseVersion => !string.IsNullOrEmpty(OpnsenseVersion);
+
     public ICommand DetectIpCommand { get; }
+
+    /// <summary>
+    /// Reset destrutivo para os padrões de fábrica. Exibe <see cref="ConfirmResetDialog"/>;
+    /// se confirmado, apaga config/credenciais e reinicia o processo em modo primeira execução.
+    /// </summary>
+    public ICommand ResetDefaultsCommand { get; }
 
     private void DetectIp()
     {
@@ -160,6 +201,43 @@ public sealed class SettingsViewModel : ViewModelBase
 
     /// <summary>True quando a última falha de auto-test foi causada por validação TLS.</summary>
     private bool _lastTestWasTls;
+
+    private bool LastTestWasTls
+    {
+        get => _lastTestWasTls;
+        set
+        {
+            if (SetField(ref _lastTestWasTls, value))
+                OnPropertyChanged(nameof(ShowAllowSelfSignedButton));
+        }
+    }
+
+    private string _lastTestErrorDetail = string.Empty;
+
+    /// <summary>
+    /// Categoria técnica do último erro de auto-test (ex.: "Authentication", "Timeout",
+    /// "TLS certificate"). Vazio quando não há falha. Diagnóstico — não substitui a
+    /// mensagem localizada de <see cref="TestStatusTooltip"/>.
+    /// </summary>
+    public string LastTestErrorDetail
+    {
+        get => _lastTestErrorDetail;
+        private set
+        {
+            if (SetField(ref _lastTestErrorDetail, value))
+                OnPropertyChanged(nameof(HasTestErrorDetail));
+        }
+    }
+
+    /// <summary>True quando há um detalhe técnico do último erro a exibir.</summary>
+    public bool HasTestErrorDetail => !string.IsNullOrEmpty(_lastTestErrorDetail);
+
+    /// <summary>
+    /// True quando o botão inline "Allow self-signed" deve aparecer: falha de conexão
+    /// causada por TLS e validação ainda habilitada (toggle desligado).
+    /// </summary>
+    public bool ShowAllowSelfSignedButton =>
+        _testStatus == TestStatus.Failed && _lastTestWasTls && !_allowInsecureTls;
 
     private static readonly SolidColorBrush SuccessBrush  = CreateFrozenBrush(Color.FromRgb(0x10, 0xB9, 0x81));
     private static readonly SolidColorBrush FailedBrush   = CreateFrozenBrush(Color.FromRgb(0xEF, 0x44, 0x44));
@@ -184,6 +262,7 @@ public sealed class SettingsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(TestStatusBrush));
                 OnPropertyChanged(nameof(TestStatusIcon));
                 OnPropertyChanged(nameof(TestStatusDisplay));
+                OnPropertyChanged(nameof(ShowAllowSelfSignedButton));
             }
         }
     }
@@ -250,16 +329,26 @@ public sealed class SettingsViewModel : ViewModelBase
             || string.IsNullOrWhiteSpace(ApiKey)
             || string.IsNullOrWhiteSpace(ApiSecret))
         {
-            _lastTestWasTls = false;
+            LastTestWasTls = false;
+            LastTestErrorDetail = string.Empty;
             TestStatus = TestStatus.Idle;
             TestStatusText = Strings.Settings_Connection_AutoTestStatus_Idle;
             TestStatusTooltip = string.Empty;
+            OpnsenseVersion = null;
             Gateways.Clear();
             GatewaysStatus = Strings.Settings_Gateways_WaitingForCredentials;
             return;
         }
 
-        _lastTestWasTls = false;
+        LastTestWasTls = false;
+        LastTestErrorDetail = string.Empty;
+        // Invalida a versão anterior: será recarregada no sucesso (LoadGatewaysFromClientAsync).
+        OpnsenseVersion = null;
+
+        // 401/403 = credenciais ausentes/inválidas ou usuário sem privilégios de firewall/routing.
+        static bool IsAuthStatus(HttpStatusCode? status) =>
+            status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden;
+
         try
         {
             var settings = new OpnsenseSettings { Host = OpnsenseHost, ApiKey = ApiKey, VerifyTls = !AllowInsecureTls };
@@ -267,39 +356,77 @@ public sealed class SettingsViewModel : ViewModelBase
             var opn = new OpnsenseClient(http,
                 Microsoft.Extensions.Logging.Abstractions.NullLogger<OptiRoute.OPNsense.Client.OpnsenseClient>.Instance);
             var version = await opn.GetVersionAsync();
+            LastTestErrorDetail = string.Empty;
             TestStatus = TestStatus.Success;
             TestStatusText = Strings.Settings_Connection_AutoTestStatus_Success;
             TestStatusTooltip = Strings.Settings_Connection_TestSuccess(version, "—");
             // Auto-load gateways ao validar credenciais (mesmo client que passou no test).
             await LoadGatewaysFromClientAsync(opn);
         }
-        catch (HttpRequestException ex)
+        catch (TaskCanceledException)
         {
-            _lastTestWasTls = TlsErrorDetector.IsTlsError(ex);
+            // HttpClient.Timeout (30s) lança TaskCanceledException quando não há cancelamento externo.
+            LastTestWasTls = false;
+            LastTestErrorDetail = "Timeout";
             TestStatus = TestStatus.Failed;
             TestStatusText = Strings.Settings_Connection_AutoTestStatus_Failed;
-            TestStatusTooltip = (!AllowInsecureTls && _lastTestWasTls)
-                ? Strings.Settings_Connection_TlsErrorHint
-                : $"{Strings.Settings_Connection_TestFailedNetwork} ({ex.Message})";
+            TestStatusTooltip = Strings.Settings_Connection_AutoTest_Error_Timeout;
             Gateways.Clear();
             GatewaysStatus = Strings.Settings_Gateways_WaitingForCredentials;
         }
-        catch (Exception ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+        catch (HttpRequestException ex)
         {
+            // TLS é detectado primeiro: o HttpClient embrulha falhas de handshake em
+            // HttpRequestException (StatusCode == null) com AuthenticationException interna.
+            var wasTls = TlsErrorDetector.IsTlsError(ex);
+            LastTestWasTls = wasTls;
             TestStatus = TestStatus.Failed;
             TestStatusText = Strings.Settings_Connection_AutoTestStatus_Failed;
-            TestStatusTooltip = Strings.Settings_Connection_TestFailedAuth;
+            if (wasTls)
+            {
+                LastTestErrorDetail = "TLS certificate";
+                TestStatusTooltip = Strings.Settings_Connection_AutoTest_Error_Tls;
+            }
+            else if (IsAuthStatus(ex.StatusCode))
+            {
+                LastTestErrorDetail = $"Authentication (HTTP {(int)ex.StatusCode!.Value})";
+                TestStatusTooltip = Strings.Settings_Connection_AutoTest_Error_Authentication;
+            }
+            else
+            {
+                LastTestErrorDetail = ex.StatusCode is null ? "Network" : $"HTTP {(int)ex.StatusCode!.Value}";
+                TestStatusTooltip = $"{Strings.Settings_Connection_TestFailedNetwork} ({ex.Message})";
+            }
+            Gateways.Clear();
+            GatewaysStatus = Strings.Settings_Gateways_WaitingForCredentials;
+        }
+        catch (AuthenticationException)
+        {
+            // Falha de autenticação TLS que escapou do wrapping do HttpClient.
+            LastTestWasTls = true;
+            LastTestErrorDetail = "TLS certificate";
+            TestStatus = TestStatus.Failed;
+            TestStatusText = Strings.Settings_Connection_AutoTestStatus_Failed;
+            TestStatusTooltip = Strings.Settings_Connection_AutoTest_Error_Tls;
             Gateways.Clear();
             GatewaysStatus = Strings.Settings_Gateways_WaitingForCredentials;
         }
         catch (Exception ex)
         {
-            _lastTestWasTls = TlsErrorDetector.IsTlsError(ex);
+            var wasTls = TlsErrorDetector.IsTlsError(ex);
+            LastTestWasTls = wasTls;
             TestStatus = TestStatus.Failed;
             TestStatusText = Strings.Settings_Connection_AutoTestStatus_Failed;
-            TestStatusTooltip = (!AllowInsecureTls && _lastTestWasTls)
-                ? Strings.Settings_Connection_TlsErrorHint
-                : ex.Message;
+            if (wasTls)
+            {
+                LastTestErrorDetail = "TLS certificate";
+                TestStatusTooltip = Strings.Settings_Connection_AutoTest_Error_Tls;
+            }
+            else
+            {
+                LastTestErrorDetail = ex.GetType().Name;
+                TestStatusTooltip = ex.Message;
+            }
             Gateways.Clear();
             GatewaysStatus = Strings.Settings_Gateways_WaitingForCredentials;
         }
@@ -416,6 +543,18 @@ public sealed class SettingsViewModel : ViewModelBase
     /// </summary>
     private async Task LoadGatewaysFromClientAsync(IOpnsenseClient client, CancellationToken ct = default)
     {
+        // Versão do OPNsense: best-effort. Uma falha aqui não impede o carregamento dos
+        // gateways — apenas deixa OpnsenseVersion null (UI mostra "(unknown)").
+        try
+        {
+            OpnsenseVersion = await client.GetVersionAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            OpnsenseVersion = null;
+            LogWarning($"Failed to read OPNsense version: {ex.Message}");
+        }
+
         try
         {
             var list = await client.GetGatewaysAsync(ct);
@@ -437,7 +576,16 @@ public sealed class SettingsViewModel : ViewModelBase
 
     // ── Advanced tab ────────────────────────────────────────────────────
 
-    public bool StartWithWindows { get; set; }
+    private bool _startWithWindows;
+    public bool StartWithWindows
+    {
+        get => _startWithWindows;
+        set
+        {
+            if (SetField(ref _startWithWindows, value))
+                ApplyStartWithWindows(value);
+        }
+    }
     public bool MinimizeToTray   { get; set; }
     public bool ShowTechnical    { get; set; }
     public bool EnableAdvancedDscp { get; set; }
@@ -605,8 +753,105 @@ public sealed class SettingsViewModel : ViewModelBase
         AppConfigManager.Save(cfg);
         SecretStore.SaveCredentials(new OpnsenseCredentials(ApiKey, ApiSecret));
 
+        // Reforça a sincronização com o registry (idempotente) — o setter já cobre
+        // mudanças de toggle, mas um Save garante o caminho do exe atual.
+        ApplyStartWithWindows(StartWithWindows);
+
         // Sinaliza para o code-behind fechar a janela
         Saved?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Reflete <see cref="StartWithWindows"/> no registry do Windows
+    /// (HKCU\Software\Microsoft\Windows\CurrentVersion\Run). Best-effort:
+    /// <see cref="WindowsStartup"/> engole falhas de permissão.
+    /// </summary>
+    private static void ApplyStartWithWindows(bool enabled)
+    {
+        try
+        {
+            if (enabled)
+            {
+                var exePath = Environment.ProcessPath
+                    ?? Path.Combine(AppContext.BaseDirectory, "OptiRoute.exe");
+                WindowsStartup.Register(WindowsStartup.AppName, exePath);
+            }
+            else
+            {
+                WindowsStartup.Unregister(WindowsStartup.AppName);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to update Windows startup registration: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Fluxo de "Reset to defaults": pede confirmação explícita, apaga a configuração
+    /// persistida (<c>config.json</c> + <c>credentials.bin</c>) e reinicia o processo para
+    /// que ele volte ao modo de primeira execução. Em falha, mostra uma mensagem amigável
+    /// e mantém o app aberto.
+    /// </summary>
+    private void ResetToDefaults()
+    {
+        var owner = Application.Current?.MainWindow;
+
+        var dialog = new ConfirmResetDialog();
+        if (owner is not null && !ReferenceEquals(owner, dialog))
+            dialog.Owner = owner;
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            AppConfigManager.ResetToDefaults();
+
+            var exePath = Environment.ProcessPath
+                          ?? Process.GetCurrentProcess().MainModule?.FileName;
+            if (string.IsNullOrWhiteSpace(exePath))
+                throw new InvalidOperationException("Cannot determine the executable path.");
+
+            LogWarning("Reset requested — relaunching in first-run mode.");
+            Process.Start(new ProcessStartInfo
+            {
+                FileName        = exePath,
+                UseShellExecute = true
+            });
+            Application.Current?.Shutdown(0);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                owner,
+                Strings.Dialog_Reset_Failed(ex.Message),
+                Strings.Dialog_Reset_Title,
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>
+    /// Append best-effort de um warning no log do app (mesmo formato do FileLoggerProvider).
+    /// Nunca deixa uma falha de logging escapar — logging não pode quebrar a UI.
+    /// </summary>
+    private static void LogWarning(string message)
+    {
+        try
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "OptiRoute");
+            Directory.CreateDirectory(dir);
+            File.AppendAllText(
+                Path.Combine(dir, "OptiRoute.log"),
+                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [Warning    ] OptiRoute.App.ViewModels.SettingsViewModel: {message}{Environment.NewLine}");
+        }
+        catch
+        {
+            // swallow
+        }
     }
 
     public event EventHandler? Saved;

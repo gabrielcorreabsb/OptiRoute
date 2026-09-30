@@ -100,6 +100,12 @@ internal static class Strings
     public static string Card_LocalOverrideRadio       => Get("Card.LocalOverrideRadio");
     public static string Card_OverrideDescription      => Get("Card.OverrideDescription");
     public static string Card_EffectiveRouteLabel      => Get("Card.EffectiveRouteLabel");
+    public static string Card_Route_GlobalLabel        => Get("Card.Route.GlobalLabel");
+    public static string Card_Route_ThisPcLabel        => Get("Card.Route.ThisPcLabel");
+    public static string Card_Route_EffectiveLabel     => Get("Card.Route.EffectiveLabel");
+    public static string Card_Route_UseGlobal          => Get("Card.Route.UseGlobal");
+    public static string Card_Route_EmptyValue         => Get("Card.Route.EmptyValue");
+    public static string Card_Route_ChangeButton       => Get("Card.Route.ChangeButton");
 
     // ── Card — LocalOnly state ─────────────────────────────────────────────
 
@@ -136,6 +142,22 @@ internal static class Strings
     public static string Dialog_InvalidTos_ForceWindowsButton => Get("Dialog.InvalidTos.ForceWindowsButton");
     public static string Dialog_InvalidTos_ForceOpnsenseButton => Get("Dialog.InvalidTos.ForceOpnsenseButton");
 
+    // ── Dialog.AdminElevation ──────────────────────────────────────────────
+
+    public static string Dialog_AdminElevation_Title          => Get("Dialog.AdminElevation.Title");
+    public static string Dialog_AdminElevation_Message        => Get("Dialog.AdminElevation.Message");
+    public static string Dialog_AdminElevation_RestartButton  => Get("Dialog.AdminElevation.RestartButton");
+    public static string Dialog_AdminElevation_ContinueButton => Get("Dialog.AdminElevation.ContinueButton");
+
+    // ── Dialog.Reset ───────────────────────────────────────────────────────
+
+    public static string Dialog_Reset_Title        => Get("Dialog.Reset.Title");
+    public static string Dialog_Reset_Message      => Get("Dialog.Reset.Message");
+    public static string Dialog_Reset_CancelButton => Get("Dialog.Reset.CancelButton");
+    public static string Dialog_Reset_ResetButton  => Get("Dialog.Reset.ResetButton");
+    public static string Dialog_Reset_Failed(string detail)
+        => string.Format(Culture, Get("Dialog.Reset.Failed"), detail);
+
     // ── Common ─────────────────────────────────────────────────────────────
 
     public static string Common_Cancel   => Get("Common.Cancel");
@@ -166,6 +188,8 @@ internal static class Strings
     public static string Settings_Connection_TlsErrorHint            => Get("Settings.Connection.TlsErrorHint");
     public static string Settings_Connection_TlsErrorHint_Short      => Get("Settings.Connection.TlsErrorHint.Short");
     public static string Settings_Connection_AllowInsecureTlsTooltip => Get("Settings.Connection.AllowInsecureTlsTooltip");
+    public static string Settings_Connection_OpnsenseVersionLabel    => Get("Settings.Connection.OpnsenseVersionLabel");
+    public static string Settings_Connection_OpnsenseVersionUnknown  => Get("Settings.Connection.OpnsenseVersionUnknown");
 
     public static string Settings_Credentials_ApiKey       => Get("Settings.Credentials.ApiKey");
     public static string Settings_Credentials_ApiSecret    => Get("Settings.Credentials.ApiSecret");
@@ -208,6 +232,10 @@ internal static class Strings
     public static string Settings_Connection_AutoTestStatus_Checking => Get("Settings.Connection.AutoTestStatus.Checking");
     public static string Settings_Connection_AutoTestStatus_Success  => Get("Settings.Connection.AutoTestStatus.Success");
     public static string Settings_Connection_AutoTestStatus_Failed   => Get("Settings.Connection.AutoTestStatus.Failed");
+    public static string Settings_Connection_AllowSelfSignedButton       => Get("Settings.Connection.AllowSelfSignedButton");
+    public static string Settings_Connection_AutoTest_Error_Authentication => Get("Settings.Connection.AutoTest.Error.Authentication");
+    public static string Settings_Connection_AutoTest_Error_Timeout      => Get("Settings.Connection.AutoTest.Error.Timeout");
+    public static string Settings_Connection_AutoTest_Error_Tls          => Get("Settings.Connection.AutoTest.Error.Tls");
 
     public static string Settings_Advanced_StartWithWindows => Get("Settings.Advanced.StartWithWindows");
     public static string Settings_Advanced_MinimizeToTray   => Get("Settings.Advanced.MinimizeToTray");
@@ -216,6 +244,8 @@ internal static class Strings
     public static string Settings_Advanced_DscpPoolToggle   => Get("Settings.Advanced.DscpPoolToggle");
     public static string Settings_Advanced_DscpPoolStart    => Get("Settings.Advanced.DscpPoolStart");
     public static string Settings_Advanced_DscpPoolEnd      => Get("Settings.Advanced.DscpPoolEnd");
+    public static string Settings_Advanced_ResetToDefaultsDescription => Get("Settings.Advanced.ResetToDefaultsDescription");
+    public static string Settings_Advanced_ResetToDefaultsButton      => Get("Settings.Advanced.ResetToDefaultsButton");
 
     public static string Wizard_Welcome_Title    => Get("Wizard.Welcome.Title");
     public static string Wizard_Welcome_Subtitle => Get("Wizard.Welcome.Subtitle");
@@ -246,6 +276,7 @@ internal static class Strings
     public static string Status_ApplyPartialFailure(int applied, int failed)
         => string.Format(Culture, Get("Status.ApplyPartialFailure"), applied, failed);
     public static string Status_ApplyFailed(string detail) => string.Format(Culture, Get("Status.ApplyFailed"), detail);
+    public static string Status_ApplyRepair_Cancelled    => Get("Status.ApplyRepair.Cancelled");
     public static string Status_RefreshSuccess(int count) => string.Format(Culture, Get("Status.RefreshSuccess"), count);
     public static string Status_RefreshFailed(string detail) => string.Format(Culture, Get("Status.RefreshFailed"), detail);
     public static string Status_RemoveFailed            => Get("Status.RemoveFailed");
@@ -255,10 +286,13 @@ internal static class Strings
     public static string Status_RegisterSuccess(string exeName) => string.Format(Culture, Get("Status.RegisterSuccess"), exeName);
     public static string Status_AlreadyRegistered(string exeName) => string.Format(Culture, Get("Status.AlreadyRegistered"), exeName);
     public static string Status_GenericError(string detail) => string.Format(Culture, Get("Status.GenericError"), detail);
+    public static string Status_OpenLogFolderFailed => Get("Status.OpenLogFolderFailed");
 
     // ── Phase 3 — Diagnostics export / About / Tray ────────────────────────
 
     public static string MainWindow_Button_ExportDiagnostics => Get("MainWindow.Button.ExportDiagnostics");
+    public static string MainWindow_OpenLogFolderButton       => Get("MainWindow.OpenLogFolderButton");
+    public static string MainWindow_OpenLogFolderTooltip      => Get("MainWindow.OpenLogFolderTooltip");
     public static string DiagnosticsExport_Success(string path) => string.Format(Culture, Get("DiagnosticsExport.Success"), path);
     public static string DiagnosticsExport_Failed(string detail) => string.Format(Culture, Get("DiagnosticsExport.Failed"), detail);
 
@@ -273,6 +307,19 @@ internal static class Strings
 
     public static string Tray_Menu_Show => Get("Tray.Menu.Show");
     public static string Tray_Menu_Quit => Get("Tray.Menu.Quit");
+    public static string Tray_Menu_Resync => Get("Tray.Menu.Resync");
+
+    // ── ApplyFailuresDialog.xaml ───────────────────────────────────────────
+
+    public static string Card_ApplyFailures_Title              => Get("Card.ApplyFailures.Title");
+    public static string Card_ApplyFailures_Subtitle(int verifiedCount, int failedCount)
+        => string.Format(Culture, Get("Card.ApplyFailures.Subtitle"), verifiedCount, failedCount);
+    public static string Card_ApplyFailures_ItemHeader(string executable, string actionType)
+        => string.Format(Culture, Get("Card.ApplyFailures.ItemHeader"), executable, actionType);
+    public static string Card_ApplyFailures_CopyDetailsButton  => Get("Card.ApplyFailures.CopyDetailsButton");
+    public static string Card_ApplyFailures_OpenLogButton      => Get("Card.ApplyFailures.OpenLogButton");
+    public static string Card_ApplyFailures_CloseButton        => Get("Card.ApplyFailures.CloseButton");
+    public static string Card_ApplyFailures_EmptyState         => Get("Card.ApplyFailures.EmptyState");
 
     // ── Add Application dialog (file picker + running process scanner) ─────
 
@@ -289,4 +336,11 @@ internal static class Strings
     public static string AddApplication_GatewayLabel       => Get("AddApplication.GatewayLabel");
     public static string AddApplication_Subtitle           => Get("AddApplication.Subtitle");
     public static string AddApplication_NoRunningAppsHint  => Get("AddApplication.NoRunningAppsHint");
+
+    // ── Banner — avisos não bloqueantes (G16: IP local dinâmico) ───────────
+
+    public static string Banner_IpChange_Title => Get("Banner.IpChange.Title");
+    public static string Banner_IpChange_Message(string configured, string current)
+        => string.Format(Culture, Get("Banner.IpChange.Message"), configured, current);
+    public static string Banner_DismissTooltip => Get("Banner.DismissTooltip");
 }

@@ -1,0 +1,63 @@
+<Window x:Class="OptiRoute.App.Windows.ConfirmResetDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:loc="clr-namespace:OptiRoute.App.Markup"
+        mc:Ignorable="d"
+        Title="{loc:LString Key=Dialog_Reset_Title}"
+        Height="220" Width="420"
+        MinHeight="200" MinWidth="380"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Background="{StaticResource Tokens.Surface.Window}"
+        Foreground="{StaticResource Tokens.Text.Primary}"
+        FocusManager.FocusedElement="{Binding ElementName=CancelButton}">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Header -->
+            <RowDefinition Height="*"/>     <!-- Message -->
+            <RowDefinition Height="Auto"/>  <!-- Footer -->
+        </Grid.RowDefinitions>
+
+        <!-- ══ Header ═══════════════════════════════════════════════════════ -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+            <TextBlock Text="&#x26A0;"
+                       FontSize="28"
+                       Foreground="{StaticResource Tokens.Semantic.Error}"
+                       Margin="0,0,12,0"
+                       VerticalAlignment="Center"/>
+            <TextBlock Text="{loc:LString Key=Dialog_Reset_Title}"
+                       FontSize="18"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource Tokens.Text.Inverse}"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- ══ Message ══════════════════════════════════════════════════════ -->
+        <TextBlock Grid.Row="1"
+                   Text="{loc:LString Key=Dialog_Reset_Message}"
+                   Foreground="{StaticResource Tokens.Text.Secondary}"
+                   FontSize="13"
+                   TextWrapping="Wrap"
+                   VerticalAlignment="Top"
+                   Margin="0,0,0,16"/>
+
+        <!-- ══ Footer ═══════════════════════════════════════════════════════ -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="CancelButton"
+                    Content="{loc:LString Key=Dialog_Reset_CancelButton}"
+                    Style="{StaticResource Styles.SecondaryButton}"
+                    Click="OnCancelClick"
+                    MinWidth="90"
+                    Margin="0,0,10,0"/>
+            <Button Content="{loc:LString Key=Dialog_Reset_ResetButton}"
+                    Style="{StaticResource Styles.DangerButton}"
+                    Click="OnResetClick"
+                    MinWidth="90"/>
+        </StackPanel>
+    </Grid>
+</Window>

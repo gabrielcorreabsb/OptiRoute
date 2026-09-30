@@ -139,6 +139,24 @@
   <data name="Card.EffectiveRouteLabel" xml:space="preserve">
     <value>Effective Route:</value>
   </data>
+  <data name="Card.Route.GlobalLabel" xml:space="preserve">
+    <value>Global Route</value>
+  </data>
+  <data name="Card.Route.ThisPcLabel" xml:space="preserve">
+    <value>This PC</value>
+  </data>
+  <data name="Card.Route.EffectiveLabel" xml:space="preserve">
+    <value>Effective Route</value>
+  </data>
+  <data name="Card.Route.UseGlobal" xml:space="preserve">
+    <value>(use global)</value>
+  </data>
+  <data name="Card.Route.EmptyValue" xml:space="preserve">
+    <value>—</value>
+  </data>
+  <data name="Card.Route.ChangeButton" xml:space="preserve">
+    <value>Change…</value>
+  </data>
 
   <!-- ════════════════════════════════════════════════════════════════════
        Card panels — LocalOnly state
@@ -215,6 +233,41 @@
   </data>
 
   <!-- ════════════════════════════════════════════════════════════════════
+       AdminElevationDialog.xaml — startup elevation prompt
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Dialog.AdminElevation.Title" xml:space="preserve">
+    <value>Administrator privileges required</value>
+  </data>
+  <data name="Dialog.AdminElevation.Message" xml:space="preserve">
+    <value>OptiRoute requires Administrator privileges to manage Windows QoS policies and firewall rules. Restart elevated?</value>
+  </data>
+  <data name="Dialog.AdminElevation.RestartButton" xml:space="preserve">
+    <value>Restart elevated</value>
+  </data>
+  <data name="Dialog.AdminElevation.ContinueButton" xml:space="preserve">
+    <value>Continue anyway</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       ConfirmResetDialog.xaml — destructive reset confirmation
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Dialog.Reset.Title" xml:space="preserve">
+    <value>Reset OptiRoute to defaults?</value>
+  </data>
+  <data name="Dialog.Reset.Message" xml:space="preserve">
+    <value>This will delete your OPNsense configuration, credentials, and all locally cached settings. The app will restart in first-run mode.</value>
+  </data>
+  <data name="Dialog.Reset.CancelButton" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Dialog.Reset.ResetButton" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="Dialog.Reset.Failed" xml:space="preserve">
+    <value>Could not reset OptiRoute: {0}</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
        Common (cancel, save, close, loading, …)
        ════════════════════════════════════════════════════════════════════ -->
   <data name="Common.Cancel" xml:space="preserve">
@@ -283,6 +336,12 @@
   </data>
   <data name="Settings.Connection.AllowInsecureTlsTooltip" xml:space="preserve">
     <value>Disables TLS certificate validation. Enable only for a self-signed OPNsense certificate on a trusted network — an attacker could otherwise intercept your API credentials (MITM).</value>
+  </data>
+  <data name="Settings.Connection.OpnsenseVersionLabel" xml:space="preserve">
+    <value>OPNsense version:</value>
+  </data>
+  <data name="Settings.Connection.OpnsenseVersionUnknown" xml:space="preserve">
+    <value>(unknown)</value>
   </data>
 
   <!-- ════════════════════════════════════════════════════════════════════
@@ -416,6 +475,18 @@
   <data name="Settings.Connection.AutoTestStatus.Failed" xml:space="preserve">
     <value>Connection failed</value>
   </data>
+  <data name="Settings.Connection.AllowSelfSignedButton" xml:space="preserve">
+    <value>Allow self-signed</value>
+  </data>
+  <data name="Settings.Connection.AutoTest.Error.Authentication" xml:space="preserve">
+    <value>Authentication failed. Verify the API key, secret, and that the user has firewall/routing privileges.</value>
+  </data>
+  <data name="Settings.Connection.AutoTest.Error.Timeout" xml:space="preserve">
+    <value>Connection timed out. Verify host URL and network reachability.</value>
+  </data>
+  <data name="Settings.Connection.AutoTest.Error.Tls" xml:space="preserve">
+    <value>TLS certificate could not be validated. If you trust this server, enable self-signed certificates below.</value>
+  </data>
 
   <!-- ════════════════════════════════════════════════════════════════════
        Settings window — Advanced tab
@@ -443,6 +514,12 @@
   </data>
   <data name="Settings.Advanced.DscpPoolEnd" xml:space="preserve">
     <value>DSCP pool end:</value>
+  </data>
+  <data name="Settings.Advanced.ResetToDefaultsDescription" xml:space="preserve">
+    <value>Delete your OPNsense configuration, credentials, and all locally cached settings. OptiRoute will restart in first-run mode.</value>
+  </data>
+  <data name="Settings.Advanced.ResetToDefaultsButton" xml:space="preserve">
+    <value>Reset to defaults</value>
   </data>
   <!-- ════════════════════════════════════════════════════════════════════
        First-run wizard
@@ -526,6 +603,9 @@
   <data name="Status.ApplyFailed" xml:space="preserve">
     <value>Failed to apply repairs: {0}</value>
   </data>
+  <data name="Status.ApplyRepair.Cancelled" xml:space="preserve">
+    <value>Apply cancelled by user.</value>
+  </data>
   <data name="Status.RefreshSuccess" xml:space="preserve">
     <value>{0} app(s) refreshed.</value>
   </data>
@@ -553,12 +633,21 @@
   <data name="Status.GenericError" xml:space="preserve">
     <value>Error: {0}</value>
   </data>
+  <data name="Status.OpenLogFolderFailed" xml:space="preserve">
+    <value>Could not open log folder. See app log for details.</value>
+  </data>
 
   <!-- ════════════════════════════════════════════════════════════════════
        Phase 3 — Diagnostics export, About dialog, Tray (optional)
        ════════════════════════════════════════════════════════════════════ -->
   <data name="MainWindow.Button.ExportDiagnostics" xml:space="preserve">
     <value>Export diagnostics</value>
+  </data>
+  <data name="MainWindow.OpenLogFolderButton" xml:space="preserve">
+    <value>📁 Logs</value>
+  </data>
+  <data name="MainWindow.OpenLogFolderTooltip" xml:space="preserve">
+    <value>Open log folder</value>
   </data>
   <data name="DiagnosticsExport.Success" xml:space="preserve">
     <value>Diagnostics exported successfully to:
@@ -642,4 +731,74 @@
   <data name="Tray.Menu.Quit" xml:space="preserve">
     <value>Quit</value>
   </data>
+  <data name="Tray.Menu.Resync" xml:space="preserve">
+    <value>Re-sync now</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       ConfirmApplyDialog.xaml — confirmation before applying reconciliation plan
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Card.ConfirmApply.Title" xml:space="preserve">
+    <value>Confirm changes</value>
+  </data>
+  <data name="Card.ConfirmApply.Subtitle" xml:space="preserve">
+    <value>OptiRoute will apply the following changes to OPNsense and Windows QoS:</value>
+  </data>
+  <data name="Card.ConfirmApply.QosHeader" xml:space="preserve">
+    <value>Windows QoS</value>
+  </data>
+  <data name="Card.ConfirmApply.FirewallHeader" xml:space="preserve">
+    <value>Firewall rules</value>
+  </data>
+  <data name="Card.ConfirmApply.NoActions" xml:space="preserve">
+    <value>No pending changes.</value>
+  </data>
+  <data name="Card.ConfirmApply.CancelButton" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Card.ConfirmApply.ApplyButton" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="Card.ConfirmApply.ActionSummary" xml:space="preserve">
+    <value>{0} QoS changes, {1} firewall changes</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       ApplyFailuresDialog.xaml — post-apply failure report
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Card.ApplyFailures.Title" xml:space="preserve">
+    <value>Apply completed with failures</value>
+  </data>
+  <data name="Card.ApplyFailures.Subtitle" xml:space="preserve">
+    <value>OptiRoute applied {0} changes but {1} failed. Inspect the details below before retrying.</value>
+  </data>
+  <data name="Card.ApplyFailures.ItemHeader" xml:space="preserve">
+    <value>{0} — {1}</value>
+  </data>
+  <data name="Card.ApplyFailures.CopyDetailsButton" xml:space="preserve">
+    <value>Copy details</value>
+  </data>
+  <data name="Card.ApplyFailures.OpenLogButton" xml:space="preserve">
+    <value>Open log folder</value>
+  </data>
+  <data name="Card.ApplyFailures.CloseButton" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Card.ApplyFailures.EmptyState" xml:space="preserve">
+    <value>No failures to display — unexpected state.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Banner — avisos não bloqueantes (G16: IP local dinâmico)
+       ════════════════════════════════════════════════════════════════════ -->
+  <data name="Banner.IpChange.Title" xml:space="preserve">
+    <value>Local IP changed</value>
+  </data>
+  <data name="Banner.IpChange.Message" xml:space="preserve">
+    <value>Configured: {0}. Current: {1}. Verify on OPNsense.</value>
+  </data>
+  <data name="Banner.DismissTooltip" xml:space="preserve">
+    <value>Dismiss</value>
+  </data>
+
 </root>

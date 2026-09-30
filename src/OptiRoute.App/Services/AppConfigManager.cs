@@ -51,8 +51,15 @@ public sealed class AppConfig
     public bool StartWithWindows { get; set; }
 
     /// <summary>DSCP pool range managed pelo App. Default 0-63. Avançado — usuário normal não toca.</summary>
-    public int DscpPoolStart { get; set; } = 0;
-    public int DscpPoolEnd { get; set; } = 63;
+    /// <summary>
+    /// Default DSCP pool range. Starts at 32 (CS5/AF41–AF43) so the first
+    /// allocated DSCP remains the curated OptiRoute default (33) instead of 1.
+    /// Range 0–31 stays reserved for CS0/CS1/AFxx/EF-class traffic that other
+    /// QoS systems on the host may use. Reservations inside the range
+    /// (CS6=48, EF=46) are still skipped by <see cref="DscpRegistry"/>.
+    /// </summary>
+    public int DscpPoolStart { get; set; } = 32;
+    public int DscpPoolEnd   { get; set; } = 63;
 
     public int LogRetentionDays { get; set; } = 30;
     public bool ShowTechnicalInformation { get; set; }
@@ -88,6 +95,16 @@ public static class AppConfigManager
     /// primeira execução e lançar o Wizard automaticamente.
     /// </summary>
     public static bool Exists() => File.Exists(ConfigPath);
+
+    /// <summary>
+    /// Diretório raiz dos dados locais do app (<c>config.json</c>, <c>credentials.bin</c>,
+    /// <c>OptiRoute.log</c>): <c>%APPDATA%\OptiRoute</c>. Usado pelo atalho "Open log folder"
+    /// do menu de Diagnostics.
+    /// </summary>
+    public static string LogFolderPath =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "OptiRoute");
 
     /// <summary>
     /// Lê config.json. Falhas retornam <c>new AppConfig()</c> (best-effort).
@@ -155,5 +172,78 @@ public static class AppConfigManager
         // Placeholder para migradores futuros. Hoje só v0→v1 (no-op além de marcar versão).
         old.SchemaVersion = CurrentSchemaVersion;
         return old;
+    }
+
+    /// <summary>
+    /// Caminho do arquivo de credenciais (DPAPI). Mesmo diretório do <see cref="ConfigPath"/>.
+    /// Mantido em sincronia com <c>OptiRoute.Windows.Security.SecretStore</c>.
+    /// </summary>
+    private static readonly string CredentialsPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "OptiRoute",
+        "credentials.bin");
+
+    /// <summary>
+    /// Caminho do log da aplicação. NUNCA é removido pelo reset (diagnóstico).
+    /// </summary>
+    private static readonly string LogPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "OptiRoute",
+        "OptiRoute.log");
+
+    /// <summary>
+    /// Restaura o app ao estado de primeira execução removendo <c>config.json</c> e
+    /// <c>credentials.bin</c> de <c>%APPDATA%\OptiRoute</c>. O <c>OptiRoute.log</c> é
+    /// preservado para diagnóstico.
+    /// <para>
+    /// Best-effort: cada remoção é independente e envolta em try/catch — uma falha em um
+    /// arquivo não impede a tentativa no outro. Falhas são registradas como warning no log.
+    /// </para>
+    /// </summary>
+    public static void ResetToDefaults()
+    {
+        TryDelete(ConfigPath, "config.json");
+        TryDelete(CredentialsPath, "credentials.bin");
+
+        // Um Save interrompido pode ter deixado o arquivo temporário para trás.
+        TryDelete(ConfigTempPath, "config.json.tmp");
+    }
+
+    private static void TryDelete(string path, string label)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+                Log("Information", $"Reset: deleted {label} ({path})");
+            }
+            else
+            {
+                Log("Information", $"Reset: {label} not found ({path}) — nothing to delete");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log("Warning", $"Reset: failed to delete {label} ({path}): {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Append best-effort no log do app (mesmo formato do <c>FileLoggerProvider</c>).
+    /// Nunca deixa uma falha de logging escapar.
+    /// </summary>
+    private static void Log(string level, string message)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
+            File.AppendAllText(LogPath,
+                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [{level,-11}] OptiRoute.App.Services.AppConfigManager: {message}{Environment.NewLine}");
+        }
+        catch
+        {
+            // Logging nunca pode quebrar o app.
+        }
     }
 }

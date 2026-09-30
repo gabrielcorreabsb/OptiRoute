@@ -4,11 +4,11 @@ OptiRoute configures network routing on the host machine and talks to the OPNsen
 
 ## Supported Versions
 
-OptiRoute is early-stage software. Only the latest released version receives security fixes. There are no long-term support branches.
+OptiRoute is early-stage software. Version **0.1.0 Public Preview** receives security updates. Only the latest released version receives security fixes. There are no long-term support branches.
 
 | Version       | Supported          |
 | ------------- | ------------------ |
-| latest release | :white_check_mark: |
+| 0.1.0 Public Preview | :white_check_mark: |
 | older releases | :x:                |
 
 Upgrade before reporting if you are running an older build.
@@ -62,6 +62,14 @@ These are inherent to the design and not bugs:
 - Local secret storage. The OPNsense API secret is stored on the local machine. Anyone with physical access to an unlocked session, or with the ability to run as the same Windows user, can read it. Full local control equals full firewall API control.
 - Opt-in insecure TLS. TLS validation is on by default. If self-signed certificates are enabled, an attacker who can MITM the network path between OptiRoute and OPNsense could intercept the API key and secret. Keep the setting off and use a trusted certificate on any untrusted network.
 - Windows QoS cache drift. OptiRoute keeps a local cache of the QoS policies it created. If policies are changed outside OptiRoute, the cache can drift from the OPNsense state. Pressing Save in Settings re-syncs it.
+
+### Known security limitations
+
+See the [Known limitations](README.md#known-limitations-v010-public-preview) section in the README for the full list. Highlights relevant to the threat model:
+
+- API secret is held as a `string` in process memory until the process exits. Memory dumps can recover it.
+- TLS certificate validation is **enabled by default**. Self-signed certificates require explicit opt-in in Settings.
+- Diagnostics exports are sanitized: Basic/Bearer authorization headers, URL userinfo, and the OPNsense host are redacted. Always review the export before sharing.
 
 ## Out of Scope
 

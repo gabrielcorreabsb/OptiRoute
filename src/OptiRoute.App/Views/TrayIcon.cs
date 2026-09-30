@@ -25,6 +25,12 @@ internal sealed class TrayIcon : IDisposable
     public event EventHandler? QuitRequested;
 
     /// <summary>
+    /// Disparado no item "Re-sync now" do menu. O <c>MainViewModel</c> responde
+    /// chamando <c>SyncAsync</c> (ignorado se já houver sincronização em andamento).
+    /// </summary>
+    public event EventHandler? SyncRequested;
+
+    /// <summary>
     /// Cria o ícone e o menu de contexto. O <paramref name="mainWindow"/> é usado
     /// apenas como referência/owner lógico (o wiring real dos eventos fica no VM).
     /// </summary>
@@ -35,11 +41,16 @@ internal sealed class TrayIcon : IDisposable
         var showItem = new Forms.ToolStripMenuItem(Strings.Tray_Menu_Show);
         showItem.Click += (_, _) => ShowRequested?.Invoke(this, EventArgs.Empty);
 
+        var syncItem = new Forms.ToolStripMenuItem(Strings.Tray_Menu_Resync);
+        syncItem.Click += (_, _) => SyncRequested?.Invoke(this, EventArgs.Empty);
+        syncItem.Font = new Font(syncItem.Font, FontStyle.Bold);
+
         var quitItem = new Forms.ToolStripMenuItem(Strings.Tray_Menu_Quit);
         quitItem.Click += (_, _) => QuitRequested?.Invoke(this, EventArgs.Empty);
 
         _menu = new Forms.ContextMenuStrip();
         _menu.Items.Add(showItem);
+        _menu.Items.Add(syncItem);
         _menu.Items.Add(new Forms.ToolStripSeparator());
         _menu.Items.Add(quitItem);
 

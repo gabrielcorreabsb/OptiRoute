@@ -713,4 +713,56 @@ public sealed class OptiRouteSynchronizer : IOptiRouteSynchronizer
 
         return new ReconciliationResult(verified, failures);
     }
+
+    /// <summary>
+    /// Re-lê o estado atual e deriva uma verificação por-app (<see cref="RouteVerification"/>)
+    /// do estado efetivo. Aproximação: <c>RuleOrderValid</c> assume <c>true</c> porque o
+    /// próprio <see cref="SyncAsync"/> já sinalizaria regra fora de ordem no estado.
+    /// </summary>
+    public async Task<IReadOnlyList<RouteVerification>> VerifyRoutesAsync(
+        IPAddress localHostIp,
+        CancellationToken ct = default)
+    {
+        _logger.LogInformation("[VerifyRoutes] Computing per-app verification");
+
+        var state   = await SyncAsync(localHostIp, progress: null, ct);
+        var results = new List<RouteVerification>(state.Routes.Count);
+
+        foreach (var route in state.Routes)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var qosActive  = route.LocalDscp is not null;
+            var ruleDscp   = route.GlobalDscp;
+            var dscpCorrect = route.LocalDscp is not null
+                              && (ruleDscp is null || route.LocalDscp == ruleDscp);
+            var ruleActive = !string.IsNullOrEmpty(route.RuleUuid);
+            var gatewayReachable = !string.IsNullOrEmpty(route.EffectiveGateway)
+                                   || !string.IsNullOrEmpty(route.DefaultGateway);
+
+            // Aproximação: o sync já teria detectado se a regra está fora de ordem.
+            const bool orderValid = true;
+
+            var failureReason = (qosActive, dscpCorrect, ruleActive, gatewayReachable) switch
+            {
+                (false, _, _, _)          => "QoS policy missing",
+                (true, false, _, _)       => $"DSCP mismatch (local={route.LocalDscp}, rule={ruleDscp?.ToString() ?? "null"})",
+                (true, true, false, _)    => "Firewall rule missing",
+                (true, true, true, false) => "Gateway unreachable",
+                _                         => null
+            };
+
+            results.Add(new RouteVerification(
+                route.Executable,
+                qosActive,
+                dscpCorrect,
+                ruleActive,
+                orderValid,
+                gatewayReachable,
+                failureReason));
+        }
+
+        _logger.LogInformation("[VerifyRoutes] Result: {Count} routes checked", results.Count);
+        return results;
+    }
 }

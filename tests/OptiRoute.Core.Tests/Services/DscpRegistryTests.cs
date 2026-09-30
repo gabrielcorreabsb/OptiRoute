@@ -99,4 +99,33 @@ public class DscpRegistryTests
         Assert.Equal("bf6.exe", registry.GetByDscp(33));
         Assert.Equal("discord.exe", registry.GetByDscp(34));
     }
+
+    [Fact]
+    public void CustomPool_AllocatesWithinRange()
+    {
+        var registry = new DscpRegistry(40, 50);
+
+        var dscp = registry.AllocateNextAvailable("game.exe");
+
+        Assert.InRange(dscp, 40, 50);
+        Assert.Equal(dscp, registry.GetByExecutable("game.exe"));
+    }
+
+    [Fact]
+    public void CustomPool_ExcludesReservedValues()
+    {
+        var registry = new DscpRegistry(40, 50);
+
+        // No range [40,50] são reservados: 40 (CS5), 46 (EF) e 48 (CS6).
+        // Há 8 slots livres (41,42,43,44,45,47,49,50) — aloca todos.
+        var allocated = new List<int>();
+        for (var i = 0; i < 8; i++)
+            allocated.Add(registry.AllocateNextAvailable($"app{i}.exe"));
+
+        Assert.All(allocated, d => Assert.InRange(d, 40, 50));
+        Assert.DoesNotContain(40, allocated);
+        Assert.DoesNotContain(46, allocated);
+        Assert.DoesNotContain(48, allocated);
+        Assert.DoesNotContain(registry.ReservedDscps, d => allocated.Contains(d));
+    }
 }

@@ -15,8 +15,15 @@ public sealed class OpnsenseSettings
     public string ApiKey     { get; set; } = string.Empty;
 
     /// <summary>
-    /// Se false, ignora erros de certificado TLS (útil para cert autoassinado).
-    /// Default: false (OPNsense usa cert autoassinado por padrão).
+    /// Se <c>false</c>, ignora erros de validação do certificado TLS (aceita cert
+    /// autoassinado/inválido). Se <c>true</c>, valida o certificado.
+    /// <para>
+    /// O default de fábrica é <c>false</c> apenas por conveniência de desenvolvimento
+    /// (o OPNsense costuma usar certificado autoassinado). O <c>OptiRoute.App</c> SEMPRE
+    /// sobrescreve este valor no startup, derivando-o da preferência do usuário:
+    /// <c>VerifyTls = !AppConfig.AllowInsecureTls</c>. Ou seja, em produção a validação
+    /// fica ligada a menos que o usuário habilite "Allow self-signed certificates".
+    /// </para>
     /// </summary>
     public bool   VerifyTls  { get; set; } = false;
 

@@ -49,6 +49,20 @@ public sealed class DscpRegistry : Interfaces.IDscpRegistry
             : DefaultPool.Where(d => !_reservedDscps.Contains(d)).ToList();
     }
 
+    /// <summary>
+    /// Constrói o pool a partir do range inclusivo <c>[poolStart, poolEnd]</c>
+    /// (ex.: 40–50), delegando ao construtor principal — que também remove os
+    /// DSCPs reservados (CS1–CS7, EF, etc.) e ordena o resultado.
+    /// <para>
+    /// Sem valores default de propósito: adicionar defaults aqui tornaria
+    /// <c>new DscpRegistry()</c> ambíguo com o construtor de <see cref="IEnumerable{Int32}"/>.
+    /// </para>
+    /// </summary>
+    public DscpRegistry(int poolStart, int poolEnd)
+        : this(Enumerable.Range(poolStart, poolEnd - poolStart + 1))
+    {
+    }
+
     public int? GetByExecutable(string executable)
     {
         var clean = CleanExecutable(executable);

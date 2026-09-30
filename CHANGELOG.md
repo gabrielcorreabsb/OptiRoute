@@ -5,7 +5,27 @@ All notable changes to OptiRoute will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.1.0] - 2026-09-29
+## [0.1.0] - 2026-09-30
+
+### Note
+First **Public Preview**. The internal 2.1.0 series was a private pre-preview; its changelog is preserved below for traceability, but 0.1.0 is the first release published externally.
+
+### Added
+- TLS validation enabled by default at startup (`VerifyTls = !config.AllowInsecureTls`)
+- Specific error messages in connection test (401, timeout, TLS) with "Allow self-signed" affordance
+- Admin-elevation check on startup with restart prompt
+- Confirmation dialog before "Apply Repair" listing pending actions
+- GitHub issue templates (bug report, feature request) and PR template
+- README sections: "Supported OPNsense versions", "Known limitations (v0.1.0)"
+- SECURITY section: "Known security limitations"
+
+### Changed
+- Default version scheme switches to semver Public Preview (`0.1.0`).
+
+### Security
+- App respects `config.AllowInsecureTls` from first boot; no silent fallback to plaintext.
+
+## [2.1.0] - 2026-09-29 — internal pre-preview (not published)
 
 ### Added
 

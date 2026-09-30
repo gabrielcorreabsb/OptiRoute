@@ -33,18 +33,18 @@
                            FontSize="14" FontWeight="Bold"
                            Foreground="{StaticResource Tokens.Semantic.Warning}"
                            HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                <TextBlock Text="{x:Static p:Strings.Wizard_Welcome_Title}"
+                <TextBlock Text="{loc:LString Key=Wizard_Welcome_Title}"
                            FontSize="32" FontWeight="Bold"
                            Foreground="{StaticResource Tokens.Text.Inverse}"
                            HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                <TextBlock Text="{x:Static p:Strings.Wizard_Welcome_Subtitle}"
+                <TextBlock Text="{loc:LString Key=Wizard_Welcome_Subtitle}"
                            FontSize="14"
                            Foreground="{StaticResource Tokens.Text.Secondary}"
                            HorizontalAlignment="Center"
                            TextWrapping="Wrap" TextAlignment="Center"
                            Margin="0,0,0,24"/>
                 <Button Style="{StaticResource Styles.PrimaryButton}"
-                        Content="{x:Static p:Strings.Wizard_NextButton}"
+                        Content="{loc:LString Key=Wizard_NextButton}"
                         Click="OnWizardNextClick"
                         HorizontalAlignment="Center"
                         MinWidth="180" Padding="24,12"
@@ -62,7 +62,7 @@
                     ItemContainerStyle="{StaticResource Styles.TabItem}">
 
             <!-- ─────────── Connection tab ─────────── -->
-            <TabItem Header="{x:Static p:Strings.Settings_Tab_Connection}">
+            <TabItem Header="{loc:LString Key=Settings_Tab_Connection}">
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -72,6 +72,10 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
+                    <!-- NOTA: os textos de ajuda do InstructionsExpander abaixo permanecem
+                         literais em inglês — não há chaves em Strings.resx para eles, então
+                         não podem ser convertidos para {loc:LString} sem criar recursos novos
+                         (fora do escopo desta tarefa de live i18n). -->
                     <patterns:InstructionsExpander Grid.Row="0"
                                                    HeaderText="How to find your OPNsense address">
                         <patterns:InstructionsExpander.Slot>
@@ -87,29 +91,59 @@
                     </patterns:InstructionsExpander>
 
                     <StackPanel Grid.Row="1" Margin="0,16,0,12">
-                        <TextBlock Text="{x:Static p:Strings.Settings_Connection_OpnsenseAddress}"
+                        <TextBlock Text="{loc:LString Key=Settings_Connection_OpnsenseAddress}"
                                    Foreground="{StaticResource Tokens.Text.Dim}"
                                    FontWeight="SemiBold" Margin="0,0,0,4"/>
                         <TextBox Style="{StaticResource Styles.ModernTextBox}"
                                  Text="{Binding OpnsenseHost, UpdateSourceTrigger=PropertyChanged}"/>
+                        <!-- G14: versão do OPNsense (lida após conexão bem-sucedida).
+                             Label + valor com fallback localizado quando ainda não há versão. -->
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <TextBlock Text="{loc:LString Key=Settings_Connection_OpnsenseVersionLabel}"
+                                       Foreground="{StaticResource Tokens.Text.Dim}"
+                                       FontSize="12"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,4,0"/>
+                            <TextBlock Text="{Binding OpnsenseVersion}"
+                                       Foreground="{StaticResource Tokens.Semantic.Success}"
+                                       FontSize="12"
+                                       VerticalAlignment="Center"
+                                       Visibility="{Binding HasOpnsenseVersion, Converter={StaticResource BoolToVis}}"/>
+                            <TextBlock Text="{loc:LString Key=Settings_Connection_OpnsenseVersionUnknown}"
+                                       Foreground="{StaticResource Tokens.Text.Dim}"
+                                       FontSize="12"
+                                       FontStyle="Italic"
+                                       VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasOpnsenseVersion}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
                     </StackPanel>
 
                     <StackPanel Grid.Row="2" Margin="0,0,0,12">
-                        <TextBlock Text="{x:Static p:Strings.Settings_Connection_LocalComputer}"
+                        <TextBlock Text="{loc:LString Key=Settings_Connection_LocalComputer}"
                                    Foreground="{StaticResource Tokens.Text.Dim}"
                                    FontWeight="SemiBold" Margin="0,0,0,4"/>
                         <TextBlock Text="{Binding DetectedIp}"
                                    Foreground="{StaticResource Tokens.Semantic.Success}"
                                    FontSize="12" Margin="0,0,0,4"/>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{x:Static p:Strings.Settings_Connection_PreferredIp}"
+                            <TextBlock Text="{loc:LString Key=Settings_Connection_PreferredIp}"
                                        Foreground="{StaticResource Tokens.Text.Dim}"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <TextBox Style="{StaticResource Styles.ModernTextBox}"
                                      Text="{Binding PreferredLocalIp, UpdateSourceTrigger=PropertyChanged}"
                                      Width="180"/>
                             <Button Style="{StaticResource Styles.SecondaryButton}"
-                                    Content="{x:Static p:Strings.Settings_Connection_DetectIpButton}"
+                                    Content="{loc:LString Key=Settings_Connection_DetectIpButton}"
                                     Command="{Binding DetectIpCommand}"
                                     Margin="8,0,0,0"/>
                         </StackPanel>
@@ -144,7 +178,7 @@
             </TabItem>
 
             <!-- ─────────── Credentials tab ─────────── -->
-            <TabItem Header="{x:Static p:Strings.Settings_Tab_Credentials}">
+            <TabItem Header="{loc:LString Key=Settings_Tab_Credentials}">
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -173,7 +207,7 @@
                     </patterns:InstructionsExpander>
 
                     <StackPanel Grid.Row="1" Margin="0,16,0,12">
-                        <TextBlock Text="{x:Static p:Strings.Settings_Credentials_ApiKey}"
+                        <TextBlock Text="{loc:LString Key=Settings_Credentials_ApiKey}"
                                    Foreground="{StaticResource Tokens.Text.Dim}"
                                    FontWeight="SemiBold" Margin="0,0,0,4"/>
                         <TextBox Style="{StaticResource Styles.ModernTextBox}"
@@ -181,7 +215,7 @@
                     </StackPanel>
 
                     <StackPanel Grid.Row="2" Margin="0,0,0,12">
-                        <TextBlock Text="{x:Static p:Strings.Settings_Credentials_ApiSecret}"
+                        <TextBlock Text="{loc:LString Key=Settings_Credentials_ApiSecret}"
                                    Foreground="{StaticResource Tokens.Text.Dim}"
                                    FontWeight="SemiBold" Margin="0,0,0,4"/>
                         <StackPanel Orientation="Horizontal">
@@ -190,7 +224,7 @@
                                          Width="320"
                                          PasswordChanged="SecretBox_PasswordChanged"/>
                             <Button Style="{StaticResource Styles.SecondaryButton}"
-                                    Content="{x:Static p:Strings.Settings_Credentials_RevealSecret}"
+                                    Content="{loc:LString Key=Settings_Credentials_RevealSecret}"
                                     Click="OnToggleSecretClick"
                                     Margin="6,0,0,0"/>
                         </StackPanel>
@@ -198,7 +232,7 @@
 
                     <StackPanel Grid.Row="3" Orientation="Horizontal">
                         <Button Style="{StaticResource Styles.PrimaryButton}"
-                                Content="{x:Static p:Strings.Settings_Credentials_ImportFile}"
+                                Content="{loc:LString Key=Settings_Credentials_ImportFile}"
                                 Click="OnImportKeyFileClick"/>
                         <TextBlock Text="{Binding ImportStatus}"
                                    Margin="12,0,0,0" VerticalAlignment="Center" FontSize="12"/>
@@ -208,14 +242,14 @@
                         <Hyperlink NavigateUri="https://docs.opnsense.org/development/api.html"
                                    RequestNavigate="OnHowToCreateClick"
                                    Foreground="{StaticResource Tokens.Accent.300}">
-                            <TextBlock Text="{x:Static p:Strings.Settings_Credentials_HowToCreate}"/>
+                            <TextBlock Text="{loc:LString Key=Settings_Credentials_HowToCreate}"/>
                         </Hyperlink>
                     </TextBlock>
                 </Grid>
             </TabItem>
 
             <!-- ─────────── Gateways tab ─────────── -->
-            <TabItem Header="{x:Static p:Strings.Settings_Tab_Gateways}">
+            <TabItem Header="{loc:LString Key=Settings_Tab_Gateways}">
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -246,7 +280,7 @@
                               CanUserAddRows="False" CanUserDeleteRows="False"
                               SelectionMode="Single" RowHeight="40">
                         <DataGrid.Columns>
-                            <DataGridTemplateColumn Header="{x:Static p:Strings.Settings_Gateways_ColumnDisplayName}"
+                            <DataGridTemplateColumn Header="{loc:LString Key=Settings_Gateways_ColumnDisplayName}"
                                                     Width="*">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -272,18 +306,18 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="{x:Static p:Strings.Settings_Gateways_ColumnOpnsenseName}"
+                            <DataGridTextColumn Header="{loc:LString Key=Settings_Gateways_ColumnOpnsenseName}"
                                                 Binding="{Binding OpnsenseName}"
                                                 IsReadOnly="True" Width="180"/>
-                            <DataGridTextColumn Header="{x:Static p:Strings.Settings_Gateways_ColumnStatus}"
+                            <DataGridTextColumn Header="{loc:LString Key=Settings_Gateways_ColumnStatus}"
                                                 Binding="{Binding Status}"
                                                 IsReadOnly="True" Width="100"/>
-                            <DataGridTemplateColumn Header="{x:Static p:Strings.Settings_Gateways_ColumnActions}"
+                            <DataGridTemplateColumn Header="{loc:LString Key=Settings_Gateways_ColumnActions}"
                                                     Width="160">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Style="{StaticResource Styles.Button.Small}"
-                                                Content="{x:Static p:Strings.Settings_Gateways_ResetButton}"
+                                                Content="{loc:LString Key=Settings_Gateways_ResetButton}"
                                                 Command="{Binding DataContext.ResetDisplayNameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"
                                                 Visibility="{Binding IsCustomized, Converter={StaticResource BoolToVis}}"/>
@@ -300,7 +334,7 @@
             </TabItem>
 
             <!-- ─────────── Advanced tab ─────────── -->
-            <TabItem Header="{x:Static p:Strings.Settings_Tab_Advanced}">
+            <TabItem Header="{loc:LString Key=Settings_Tab_Advanced}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="16">
                         <patterns:InstructionsExpander
@@ -316,20 +350,20 @@
                         </patterns:InstructionsExpander>
 
                         <CheckBox Style="{StaticResource Styles.ModernCheckBox}"
-                                  Content="{x:Static p:Strings.Settings_Advanced_StartWithWindows}"
+                                  Content="{loc:LString Key=Settings_Advanced_StartWithWindows}"
                                   IsChecked="{Binding StartWithWindows}"
                                   Margin="0,16,0,8"/>
                         <CheckBox Style="{StaticResource Styles.ModernCheckBox}"
-                                  Content="{x:Static p:Strings.Settings_Advanced_MinimizeToTray}"
+                                  Content="{loc:LString Key=Settings_Advanced_MinimizeToTray}"
                                   IsChecked="{Binding MinimizeToTray}"
                                   Margin="0,0,0,8"/>
                         <CheckBox Style="{StaticResource Styles.ModernCheckBox}"
-                                  Content="{x:Static p:Strings.Settings_Advanced_ShowTechnical}"
+                                  Content="{loc:LString Key=Settings_Advanced_ShowTechnical}"
                                   IsChecked="{Binding ShowTechnical}"
                                   Margin="0,0,0,12"/>
 
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                            <TextBlock Text="{x:Static p:Strings.Settings_Advanced_LogRetention}"
+                            <TextBlock Text="{loc:LString Key=Settings_Advanced_LogRetention}"
                                        Foreground="{StaticResource Tokens.Text.Dim}"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <TextBox Style="{StaticResource Styles.ModernTextBox}"
@@ -339,24 +373,40 @@
 
                         <CheckBox x:Name="DscpPoolToggle"
                                   Style="{StaticResource Styles.ModernCheckBox}"
-                                  Content="{x:Static p:Strings.Settings_Advanced_DscpPoolToggle}"
+                                  Content="{loc:LString Key=Settings_Advanced_DscpPoolToggle}"
                                   IsChecked="{Binding EnableAdvancedDscp}"
                                   Margin="0,8,0,4"/>
                         <StackPanel Orientation="Horizontal" Margin="0,4,0,0"
                                     IsEnabled="{Binding ElementName=DscpPoolToggle, Path=IsChecked}">
-                            <TextBlock Text="{x:Static p:Strings.Settings_Advanced_DscpPoolStart}"
+                            <TextBlock Text="{loc:LString Key=Settings_Advanced_DscpPoolStart}"
                                        Foreground="{StaticResource Tokens.Text.Dim}"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <TextBox Style="{StaticResource Styles.ModernTextBox}"
                                      Text="{Binding DscpPoolStart, UpdateSourceTrigger=PropertyChanged}"
                                      Width="60"/>
-                            <TextBlock Text="{x:Static p:Strings.Settings_Advanced_DscpPoolEnd}"
+                            <TextBlock Text="{loc:LString Key=Settings_Advanced_DscpPoolEnd}"
                                        Foreground="{StaticResource Tokens.Text.Dim}"
                                        VerticalAlignment="Center" Margin="12,0,8,0"/>
                             <TextBox Style="{StaticResource Styles.ModernTextBox}"
                                      Text="{Binding DscpPoolEnd, UpdateSourceTrigger=PropertyChanged}"
                                      Width="60"/>
                         </StackPanel>
+
+                        <!-- G15: reset destrutivo — apaga config + credenciais e reinicia o app. -->
+                        <Border Style="{StaticResource Styles.ErrorBox}"
+                                Margin="0,20,0,0">
+                            <StackPanel>
+                                <TextBlock Text="{loc:LString Key=Settings_Advanced_ResetToDefaultsDescription}"
+                                           Foreground="{StaticResource Tokens.Text.Secondary}"
+                                           FontSize="12"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,8"/>
+                                <Button Content="{loc:LString Key=Settings_Advanced_ResetToDefaultsButton}"
+                                        Style="{StaticResource Styles.DangerButton}"
+                                        Command="{Binding ResetDefaultsCommand}"
+                                        HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -381,17 +431,31 @@
                            VerticalAlignment="Center"
                            TextWrapping="Wrap"
                            ToolTip="{Binding TestStatusTooltip}"/>
+                <!-- Ação inline quando a falha é TLS e a validação ainda está ligada:
+                     habilita AllowInsecureTls e re-testa a conexão. -->
+                <Button Content="{loc:LString Key=Settings_Connection_AllowSelfSignedButton}"
+                        Command="{Binding AllowSelfSignedCommand}"
+                        Style="{StaticResource Styles.Button.Small}"
+                        Margin="10,0,0,0"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding ShowAllowSelfSignedButton, Converter={StaticResource BoolToVis}}"/>
+                <TextBlock Text="{Binding LastTestErrorDetail}"
+                           Foreground="{StaticResource Tokens.Text.Dim}"
+                           FontSize="11"
+                           Margin="10,0,0,0"
+                           VerticalAlignment="Center"
+                           Visibility="{Binding HasTestErrorDetail, Converter={StaticResource BoolToVis}}"/>
             </StackPanel>
 
             <!-- Action buttons -->
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button x:Name="CancelButton"
                         Style="{StaticResource Styles.SecondaryButton}"
-                        Content="{x:Static p:Strings.Common_Cancel}"
+                        Content="{loc:LString Key=Common_Cancel}"
                         Click="OnCancelClick"
                         Margin="0,0,8,0"/>
                 <Button Style="{StaticResource Styles.PrimaryButton}"
-                        Content="{x:Static p:Strings.Common_Save}"
+                        Content="{loc:LString Key=Common_Save}"
                         Command="{Binding SaveCommand}"
                         Visibility="{Binding IsNotFirstRun, Converter={StaticResource BoolToVis}}"/>
             </StackPanel>

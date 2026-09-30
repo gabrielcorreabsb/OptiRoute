@@ -30,6 +30,7 @@
               Visibility="{Binding IsMainContentVisible, Converter={StaticResource BoolToVis}}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Header / Status Bar -->
+                <RowDefinition Height="Auto"/> <!-- IP change banner (G16) -->
                 <RowDefinition Height="Auto"/> <!-- Gateways Bar -->
                 <RowDefinition Height="*"/>    <!-- Applications List -->
                 <RowDefinition Height="Auto"/> <!-- Footer / Actions -->
@@ -109,6 +110,11 @@
                         Style="{StaticResource Styles.SecondaryButton}"
                         Margin="0,0,10,0"
                         ToolTip="{loc:LString Key=MainWindow_Button_ExportDiagnostics}"/>
+                <Button Content="{loc:LString Key=MainWindow_OpenLogFolderButton}"
+                        Command="{Binding OpenLogFolderCommand}"
+                        ToolTip="{loc:LString Key=MainWindow_OpenLogFolderTooltip}"
+                        Style="{StaticResource Styles.IconButton}"
+                        Margin="0,0,10,0"/>
                 <Button Content="ⓘ"
                         Command="{Binding ShowAboutCommand}"
                         ToolTip="{loc:LString Key=About_Title}"
@@ -122,8 +128,39 @@
             </StackPanel>
         </Grid>
 
-        <!-- 2. Gateways Bar -->
+        <!-- 1b. IP change banner (G16) — aviso NÃO bloqueante de mudança de IP local -->
         <Border Grid.Row="1"
+                Style="{StaticResource Styles.WarningBox}"
+                Padding="12,8" Margin="0,0,0,16"
+                Visibility="{Binding HasIpChangeBanner, Converter={StaticResource BoolToVis}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="⚠" FontSize="14"
+                           Foreground="{StaticResource Tokens.Semantic.Warning}"
+                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{loc:LString Key=Banner.IpChange.Title}"
+                               FontWeight="Bold" FontSize="12"
+                               Foreground="{StaticResource Tokens.Text.Inverse}"/>
+                    <TextBlock Text="{Binding IpChangeBannerMessage}"
+                               FontSize="11"
+                               Foreground="{StaticResource Tokens.Text.Secondary}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+                <Button Grid.Column="2" Content="✕"
+                        Command="{Binding DismissIpChangeBannerCommand}"
+                        Style="{StaticResource Styles.IconButton}"
+                        VerticalAlignment="Center"
+                        ToolTip="{loc:LString Key=Banner.DismissTooltip}"/>
+            </Grid>
+        </Border>
+
+        <!-- 2. Gateways Bar -->
+        <Border Grid.Row="2"
                 Style="{StaticResource Styles.Card}"
                 Padding="12,8" Margin="0,0,0,16">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -159,7 +196,7 @@
         </Border>
 
         <!-- 3. Applications List -->
-        <Grid Grid.Row="2" Margin="0,0,0,12">
+        <Grid Grid.Row="3" Margin="0,0,0,12">
             <!-- Estado Vazio -->
             <Border Style="{StaticResource Styles.Card}"
                     Padding="32"
@@ -192,23 +229,30 @@
                                     Padding="16"
                                     Margin="0,0,0,12">
                                 <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="220"/>                  <!-- App Details & DSCP -->
-                                        <ColumnDefinition Width="200" MinWidth="180"/>   <!-- Global Default -->
-                                        <ColumnDefinition Width="*" MinWidth="280"/>     <!-- This PC Routing -->
-                                        <ColumnDefinition Width="200" MinWidth="160"/>   <!-- Effective Status -->
-                                        <ColumnDefinition Width="Auto"/>                 <!-- Delete -->
-                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>   <!-- Header: app info + badges + delete -->
+                                        <RowDefinition Height="Auto"/>   <!-- State banner for non-sync states -->
+                                        <RowDefinition Height="Auto"/>   <!-- 3-route block -->
+                                    </Grid.RowDefinitions>
 
-                                    <!-- Coluna 1: Nome do App e Status -->
-                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding DisplayName}"
-                                                   FontWeight="Bold" FontSize="16"
-                                                   Foreground="{StaticResource Tokens.Text.Inverse}"/>
-                                        <TextBlock Text="{Binding Executable}"
-                                                   Foreground="{StaticResource Tokens.Text.Dim}"
-                                                   FontSize="12" Margin="0,2,0,6"/>
-                                        <WrapPanel>
+                                    <!-- ══ Header ═══════════════════════════════════════════════════════ -->
+                                    <Grid Grid.Row="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>       <!-- App name / executable -->
+                                            <ColumnDefinition Width="Auto"/>    <!-- DSCP + SyncState badges -->
+                                            <ColumnDefinition Width="Auto"/>    <!-- Delete -->
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding DisplayName}"
+                                                       FontWeight="Bold" FontSize="16"
+                                                       Foreground="{StaticResource Tokens.Text.Inverse}"/>
+                                            <TextBlock Text="{Binding Executable}"
+                                                       Foreground="{StaticResource Tokens.Text.Dim}"
+                                                       FontSize="12" Margin="0,2,0,0"/>
+                                        </StackPanel>
+
+                                        <WrapPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
                                             <Border Background="{StaticResource Tokens.Surface.CardHover}"
                                                     BorderBrush="{StaticResource Tokens.Divider.Default}"
                                                     BorderThickness="1"
@@ -253,43 +297,199 @@
                                                 </StackPanel>
                                             </Border>
                                         </WrapPanel>
-                                    </StackPanel>
 
-                                    <!-- Colunas Centrais: Painel Sincronizado vs Painel LocalOnly vs GlobalOnly -->
-                                    <Grid Grid.Column="1" Grid.ColumnSpan="2" Margin="8,0">
-                                        <!-- Modo Sincronizado -->
-                                        <Grid Visibility="{Binding IsSynchronized, Converter={StaticResource BoolToVis}}">
+                                        <Button Grid.Column="2"
+                                                Content="✕"
+                                                Command="{Binding DataContext.DeleteApplicationCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource Styles.DangerButton}"
+                                                VerticalAlignment="Center"
+                                                ToolTip="{loc:LString Key=Card_DeleteButton_ToolTip}"/>
+                                    </Grid>
+
+                                    <!-- ══ State banner (non-synchronized) ═══════════════════════════════ -->
+                                    <!-- LocalOnly -->
+                                    <Border Grid.Row="1"
+                                            Background="{StaticResource Tokens.Surface.CardHover}"
+                                            BorderBrush="{StaticResource Tokens.Divider.Default}"
+                                            BorderThickness="1"
+                                            CornerRadius="{StaticResource Tokens.Radius.Medium}"
+                                            Padding="12,8"
+                                            Margin="0,12,0,0"
+                                            Visibility="{Binding IsLocalOnly, Converter={StaticResource BoolToVis}}">
+                                        <Grid>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="180"/>
                                                 <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-
-                                            <!-- Global Default -->
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
-                                                <TextBlock Text="{loc:LString Key=Card_GlobalDefaultLabel}"
-                                                           Foreground="{StaticResource Tokens.Text.Dim}"
-                                                           FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                                <ComboBox Style="{StaticResource Styles.ModernComboBox}"
-                                                          ItemsSource="{Binding AvailableGateways}"
-                                                          SelectedItem="{Binding DefaultGateway}"
-                                                          MinWidth="140"/>
-                                                <TextBlock Text="{loc:LString Key=Card_DefaultRoutingLabel}"
-                                                           FontSize="10"
-                                                           Foreground="{StaticResource Tokens.Text.Dim}"
-                                                           Margin="0,4,0,0"/>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="{loc:LString Key=Card_LocalOnly_Title}"
+                                                           FontWeight="Bold" FontSize="12"
+                                                           Foreground="{StaticResource Tokens.Text.Primary}"/>
+                                                <TextBlock Text="{loc:LString Key=Card_LocalOnly_Subtitle}"
+                                                           FontSize="11"
+                                                           Foreground="{StaticResource Tokens.Text.Secondary}"/>
                                             </StackPanel>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Content="{loc:LString Key=Card_LocalOnly_RegisterButton}"
+                                                        Command="{Binding DataContext.PromoteLocalCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}"
+                                                        Style="{StaticResource Styles.PrimaryButton}"
+                                                        Margin="0,0,8,0"/>
+                                                <Button Content="{loc:LString Key=Card_LocalOnly_RemoveButton}"
+                                                        Command="{Binding DataContext.RemoveLocalCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}"
+                                                        Style="{StaticResource Styles.DangerButton}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
 
-                                            <!-- Este Computador (Override) -->
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
-                                                <TextBlock Text="{loc:LString Key=Card_ThisComputerCardLabel}"
+                                    <!-- GlobalOnly -->
+                                    <Border Grid.Row="1"
+                                            Background="{StaticResource Tokens.Semantic.InfoBg}"
+                                            BorderBrush="{StaticResource Tokens.Semantic.InfoBorder}"
+                                            BorderThickness="1"
+                                            CornerRadius="{StaticResource Tokens.Radius.Medium}"
+                                            Padding="12,8"
+                                            Margin="0,12,0,0"
+                                            Visibility="{Binding IsGlobalOnly, Converter={StaticResource BoolToVis}}">
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{loc:LString Key=Card_GlobalOnly_Title}"
+                                                       FontWeight="Bold" FontSize="12"
+                                                       Foreground="{StaticResource Tokens.Text.Inverse}"/>
+                                            <TextBlock Text="{loc:LString Key=Card_GlobalOnly_Subtitle}"
+                                                       FontSize="11"
+                                                       Foreground="{StaticResource Tokens.Text.Secondary}"/>
+                                            <TextBlock Text="{loc:LString Key=Card_GlobalOnly_Hint}"
+                                                       FontSize="11"
+                                                       Foreground="{StaticResource Tokens.Text.Dim}" Margin="0,4,0,0"
+                                                       FontStyle="Italic"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Conflict -->
+                                    <Border Grid.Row="1"
+                                            Background="{StaticResource Tokens.Semantic.ErrorBg}"
+                                            BorderBrush="{StaticResource Tokens.Semantic.ErrorBorder}"
+                                            BorderThickness="1"
+                                            CornerRadius="{StaticResource Tokens.Radius.Medium}"
+                                            Padding="12,8"
+                                            Margin="0,12,0,0"
+                                            Visibility="{Binding IsConflict, Converter={StaticResource BoolToVis}}">
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{loc:LString Key=Card_Conflict_Title}"
+                                                       FontWeight="Bold" FontSize="12"
+                                                       Foreground="{StaticResource Tokens.Text.Inverse}"/>
+                                            <TextBlock Text="{loc:LString Key=Card_Conflict_Subtitle}"
+                                                       FontSize="11"
+                                                       Foreground="{StaticResource Tokens.Text.Secondary}"/>
+                                            <TextBlock Text="{loc:LString Key=Card_Conflict_Hint}"
+                                                       FontSize="11"
+                                                       Foreground="{StaticResource Tokens.Text.Dim}" Margin="0,4,0,0"
+                                                       FontStyle="Italic"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- ══ 3-Route block ═══════════════════════════════════════════════ -->
+                                    <Border Grid.Row="2"
+                                            Background="{StaticResource Tokens.Surface.Window}"
+                                            BorderBrush="{StaticResource Tokens.Divider.Default}"
+                                            BorderThickness="1"
+                                            CornerRadius="{StaticResource Tokens.Radius.Medium}"
+                                            Padding="12"
+                                            Margin="0,12,0,0">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>   <!-- Global Route -->
+                                                <RowDefinition Height="Auto"/>   <!-- Separator -->
+                                                <RowDefinition Height="Auto"/>   <!-- This PC -->
+                                                <RowDefinition Height="Auto"/>   <!-- Separator -->
+                                                <RowDefinition Height="Auto"/>   <!-- Effective Route -->
+                                                <RowDefinition Height="Auto"/>   <!-- Verification -->
+                                            </Grid.RowDefinitions>
+
+                                            <!-- Global Route -->
+                                            <Grid Grid.Row="0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="110"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{loc:LString Key=Card_Route_GlobalLabel}"
                                                            Foreground="{StaticResource Tokens.Text.Dim}"
-                                                           FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                                <StackPanel Orientation="Horizontal">
+                                                           FontSize="12" FontWeight="SemiBold"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="13"
+                                                           TextTrimming="CharacterEllipsis">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{StaticResource Tokens.Text.Primary}"/>
+                                                            <Setter Property="Text" Value="{Binding DefaultGateway, FallbackValue=''}"/>
+                                                            <Setter Property="ToolTip" Value="{Binding DefaultGateway}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding DefaultGateway}" Value="">
+                                                                    <Setter Property="Text" Value="{loc:LString Key=Card_Route_EmptyValue}"/>
+                                                                    <Setter Property="Foreground" Value="{StaticResource Tokens.Text.Dim}"/>
+                                                                    <Setter Property="ToolTip" Value="{x:Null}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Grid>
+
+                                            <!-- Separator -->
+                                            <Border Grid.Row="1"
+                                                    Height="1"
+                                                    Background="{StaticResource Tokens.Divider.Subtle}"
+                                                    Margin="0,8"/>
+
+                                            <!-- This PC -->
+                                            <Grid Grid.Row="2">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="110"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{loc:LString Key=Card_Route_ThisPcLabel}"
+                                                           Foreground="{StaticResource Tokens.Text.Dim}"
+                                                           FontSize="12" FontWeight="SemiBold"
+                                                           VerticalAlignment="Center"/>
+
+                                                <!-- Current value -->
+                                                <TextBlock Grid.Column="1"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="13"
+                                                           TextTrimming="CharacterEllipsis">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{StaticResource Tokens.Text.Primary}"/>
+                                                            <Setter Property="Text" Value="{Binding SelectedOverrideGateway, FallbackValue=''}"/>
+                                                            <Setter Property="ToolTip" Value="{Binding SelectedOverrideGateway}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding UseGlobalDefault}" Value="True">
+                                                                    <Setter Property="Text" Value="{loc:LString Key=Card_Route_UseGlobal}"/>
+                                                                    <Setter Property="Foreground" Value="{StaticResource Tokens.Text.Dim}"/>
+                                                                    <Setter Property="ToolTip" Value="{loc:LString Key=Card_Route_UseGlobal}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+
+                                                <!-- Edit controls (Synchronized only) -->
+                                                <StackPanel Grid.Column="2"
+                                                            Orientation="Horizontal"
+                                                            VerticalAlignment="Center"
+                                                            Visibility="{Binding IsSynchronized, Converter={StaticResource BoolToVis}}">
                                                     <RadioButton Content="{loc:LString Key=Card_FollowGlobalRadio}"
                                                                  IsChecked="{Binding UseGlobalDefault}"
                                                                  Foreground="{StaticResource Tokens.Text.Primary}"
                                                                  VerticalAlignment="Center"
-                                                                 Margin="0,0,14,0"/>
+                                                                 Margin="0,0,12,0"/>
                                                     <RadioButton Content="{loc:LString Key=Card_LocalOverrideRadio}"
                                                                  IsChecked="{Binding UseLocalOverride}"
                                                                  Foreground="{StaticResource Tokens.Text.Primary}"
@@ -299,120 +499,80 @@
                                                               ItemsSource="{Binding AvailableGateways}"
                                                               SelectedItem="{Binding SelectedOverrideGateway}"
                                                               IsEnabled="{Binding UseLocalOverride}"
-                                                              MinWidth="160"/>
-                                                </StackPanel>
-                                                <TextBlock Text="{loc:LString Key=Card_OverrideDescription}"
-                                                           FontSize="10"
-                                                           Foreground="{StaticResource Tokens.Text.Dim}"
-                                                           Margin="0,4,0,0"/>
-                                            </StackPanel>
-                                        </Grid>
-
-                                        <!-- Modo Somente Local (Órfão) — info neutro -->
-                                        <Border Background="{StaticResource Tokens.Surface.CardHover}"
-                                                BorderBrush="{StaticResource Tokens.Divider.Default}" BorderThickness="1"
-                                                CornerRadius="{StaticResource Tokens.Radius.Medium}"
-                                                Padding="12,8"
-                                                Visibility="{Binding IsLocalOnly, Converter={StaticResource BoolToVis}}">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                    <TextBlock Text="{loc:LString Key=Card_LocalOnly_Title}"
-                                                               FontWeight="Bold" FontSize="12"
-                                                               Foreground="{StaticResource Tokens.Text.Primary}"/>
-                                                    <TextBlock Text="{loc:LString Key=Card_LocalOnly_Subtitle}"
-                                                               FontSize="11"
-                                                               Foreground="{StaticResource Tokens.Text.Secondary}"/>
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <Button Content="{loc:LString Key=Card_LocalOnly_RegisterButton}"
-                                                            Command="{Binding DataContext.PromoteLocalCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                            CommandParameter="{Binding}"
-                                                            Style="{StaticResource Styles.PrimaryButton}"
-                                                            Margin="0,0,8,0"/>
-                                                    <Button Content="{loc:LString Key=Card_LocalOnly_RemoveButton}"
-                                                            Command="{Binding DataContext.RemoveLocalCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                            CommandParameter="{Binding}"
-                                                            Style="{StaticResource Styles.DangerButton}"/>
+                                                              MinWidth="140"/>
                                                 </StackPanel>
                                             </Grid>
-                                        </Border>
 
-                                        <!-- Modo Somente Global — neutro/azul-cinza -->
-                                        <Border Background="#1E293B" BorderBrush="#334155" BorderThickness="1"
-                                                CornerRadius="{StaticResource Tokens.Radius.Medium}"
-                                                Padding="12,8"
-                                                Visibility="{Binding IsGlobalOnly, Converter={StaticResource BoolToVis}}">
-                                            <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="{loc:LString Key=Card_GlobalOnly_Title}"
-                                                           FontWeight="Bold" FontSize="12"
-                                                           Foreground="#94A3B8"/>
-                                                <TextBlock Text="{loc:LString Key=Card_GlobalOnly_Subtitle}"
-                                                           FontSize="11"
-                                                           Foreground="#64748B"/>
-                                                <TextBlock Text="{loc:LString Key=Card_GlobalOnly_Hint}"
-                                                           FontSize="11"
-                                                           Foreground="#94A3B8" Margin="0,4,0,0"
-                                                           FontStyle="Italic"/>
-                                            </StackPanel>
-                                        </Border>
+                                            <!-- Separator -->
+                                            <Border Grid.Row="3"
+                                                    Height="1"
+                                                    Background="{StaticResource Tokens.Divider.Subtle}"
+                                                    Margin="0,8"/>
 
-                                        <!-- Modo Conflito — vermelho -->
-                                        <Border Background="{StaticResource Tokens.Semantic.ErrorBg}"
-                                                BorderBrush="#7F1D1D"
-                                                BorderThickness="1"
-                                                CornerRadius="{StaticResource Tokens.Radius.Medium}"
-                                                Padding="12,8"
-                                                Visibility="{Binding IsConflict, Converter={StaticResource BoolToVis}}">
-                                            <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="{loc:LString Key=Card_Conflict_Title}"
-                                                           FontWeight="Bold" FontSize="12"
-                                                           Foreground="#FECACA"/>
-                                                <TextBlock Text="{loc:LString Key=Card_Conflict_Subtitle}"
-                                                           FontSize="11"
-                                                           Foreground="#FCA5A5"/>
-                                                <TextBlock Text="{loc:LString Key=Card_Conflict_Hint}"
-                                                           FontSize="11"
-                                                           Foreground="#FECACA" Margin="0,4,0,0"
-                                                           FontStyle="Italic"/>
-                                            </StackPanel>
-                                        </Border>
-                                    </Grid>
+                                            <!-- Effective Route -->
+                                            <Grid Grid.Row="4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="110"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{loc:LString Key=Card_Route_EffectiveLabel}"
+                                                           Foreground="{StaticResource Tokens.Text.Dim}"
+                                                           FontSize="12" FontWeight="SemiBold"
+                                                           VerticalAlignment="Center"/>
+                                                <Border Grid.Column="1"
+                                                        Background="{StaticResource Tokens.Semantic.SuccessBg}"
+                                                        BorderBrush="{StaticResource Tokens.Semantic.SuccessBorder}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="{StaticResource Tokens.Radius.Small}"
+                                                        Padding="8,4"
+                                                        HorizontalAlignment="Left"
+                                                        VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding EffectiveGateway}"
+                                                               FontWeight="Bold" FontSize="13"
+                                                               Foreground="{StaticResource Tokens.Semantic.Success}"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding EffectiveGateway}"/>
+                                                </Border>
+                                            </Grid>
 
-                                    <!-- Coluna 4: Rota Efetiva e Motivo -->
-                                    <StackPanel Grid.Column="3" VerticalAlignment="Center" HorizontalAlignment="Center">
-                                        <TextBlock Text="{loc:LString Key=Card_EffectiveRouteLabel}"
-                                                   Foreground="{StaticResource Tokens.Text.Dim}"
-                                                   FontSize="11" FontWeight="SemiBold"
-                                                   HorizontalAlignment="Center"/>
-                                        <Border Margin="0,4,0,2" Padding="10,4"
-                                                Background="{StaticResource Tokens.Surface.Window}"
-                                                BorderBrush="{StaticResource Tokens.Divider.Default}"
-                                                BorderThickness="1"
-                                                CornerRadius="{StaticResource Tokens.Radius.Medium}">
-                                            <TextBlock Text="{Binding EffectiveGateway}"
-                                                       FontWeight="Bold" FontSize="13"
-                                                       Foreground="{StaticResource Tokens.Text.Primary}"
-                                                       HorizontalAlignment="Center"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       ToolTip="{Binding EffectiveGateway}"/>
-                                        </Border>
-                                        <TextBlock Text="{Binding Reason}" FontSize="10"
-                                                   Foreground="{StaticResource Tokens.Text.Dim}"
-                                                   HorizontalAlignment="Center"/>
-                                    </StackPanel>
-
-                                    <!-- Coluna 5: Ação Rápida de Exclusão -->
-                                    <Button Grid.Column="4"
-                                            Content="✕"
-                                            Command="{Binding DataContext.DeleteApplicationCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding}"
-                                            Style="{StaticResource Styles.DangerButton}"
-                                            VerticalAlignment="Center"
-                                            ToolTip="{loc:LString Key=Card_DeleteButton_ToolTip}"/>
+                                            <!-- Verification summary -->
+                                            <Border Grid.Row="5"
+                                                    Background="{StaticResource Tokens.Surface.CardHover}"
+                                                    BorderBrush="{StaticResource Tokens.Divider.Default}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="{StaticResource Tokens.Radius.Small}"
+                                                    Padding="10,8"
+                                                    Margin="0,10,0,0"
+                                                    Visibility="{Binding IsVerified, Converter={StaticResource BoolToVis}}">
+                                                <StackPanel>
+                                                    <TextBlock FontSize="12"
+                                                               FontWeight="SemiBold"
+                                                               Text="{Binding VerificationSummary}">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="{StaticResource Tokens.Semantic.Warning}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding VerificationFailureReason}" Value="{x:Null}">
+                                                                        <Setter Property="Foreground" Value="{StaticResource Tokens.Semantic.Success}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding VerificationFailureReason}" Value="">
+                                                                        <Setter Property="Foreground" Value="{StaticResource Tokens.Semantic.Success}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding VerificationFailureReason}"
+                                                               FontSize="11"
+                                                               Foreground="{StaticResource Tokens.Semantic.Error}"
+                                                               TextWrapping="Wrap"
+                                                               Margin="0,2,0,0"
+                                                               Visibility="{Binding VerificationFailureReason, Converter={StaticResource BoolToVis}}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
                                 </Grid>
                             </Border>
                         </DataTemplate>
@@ -422,7 +582,7 @@
         </Grid>
 
         <!-- 4. Footer / Status Bar (expandida — Phase 2 UX) -->
-        <Border Grid.Row="3"
+        <Border Grid.Row="4"
                 Style="{StaticResource Styles.Card}"
                 Padding="12,8">
             <Grid>

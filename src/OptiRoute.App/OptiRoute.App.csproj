@@ -14,6 +14,10 @@
     <AssemblyName>OptiRoute</AssemblyName>
     <AssemblyTitle>OptiRoute</AssemblyTitle>
     <Product>OptiRoute</Product>
+    <Version>0.1.0</Version>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
+    <InformationalVersion>0.1.0</InformationalVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/gabrielcorreabsb/OptiRoute/tree/main/docs
+    about: Leia a documentação antes de abrir issue (especialmente troubleshooting.md)
+  - name: Security issues
+    url: https://github.com/gabrielcorreabsb/OptiRoute/blob/main/SECURITY.md
+    about: NÃO abra issue pública para vulnerabilidades. Siga SECURITY.md.

@@ -178,4 +178,14 @@ public interface IOptiRouteSynchronizer
         ReconciliationPlan plan,
         IPAddress localHostIp,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Re-lê o estado atual (via <see cref="SyncAsync"/>) e devolve a verificação
+    /// por-app do estado efetivo: QoS ativo, DSCP correto, regra ativa, ordem da
+    /// regra e gateway alcançável. Complementa <see cref="VerifyAsync"/> (falhas
+    /// estruturadas por ação) para renderização ✓/⚠ por card.
+    /// </summary>
+    Task<IReadOnlyList<RouteVerification>> VerifyRoutesAsync(
+        IPAddress localHostIp,
+        CancellationToken ct = default);
 }

@@ -1,0 +1,68 @@
+name: Bug Report
+description: Reportar comportamento incorreto do OptiRoute
+title: "[Bug] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - Windows 11
+        - Windows 10
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: OptiRoute version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: opnsense
+    attributes:
+      label: OPNsense version
+      placeholder: 24.7
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Settings
+        2. Click ...
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Diagnostics export or relevant log lines
+      placeholder: |
+        Paste from %APPDATA%\OptiRoute\OptiRoute.log or attach diagnostics export.
+        Remember: diagnostics exports are auto-sanitized, but double-check before sharing.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I am running OptiRoute as Administrator
+          required: true
+        - label: I have read the troubleshooting guide
+          required: false
+        - label: This is not a duplicate of an existing issue
+          required: true

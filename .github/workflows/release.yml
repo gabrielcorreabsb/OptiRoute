@@ -1,0 +1,96 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write   # para criar GitHub Release
+
+jobs:
+  release:
+    name: Build, test, package, publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "version_pretty=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Restore
+        run: dotnet restore -p:EnableWindowsTargeting=true
+
+      - name: Build (Release) — produces the artifacts that publish will package
+        run: dotnet build -c Release -p:EnableWindowsTargeting=true --no-restore
+
+      - name: Test Core
+        run: dotnet test tests/OptiRoute.Core.Tests -c Release -p:EnableWindowsTargeting=true --no-build
+
+      - name: Publish (Release, win-x64 self-contained single file)
+        run: >
+          dotnet publish src/OptiRoute.App
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:EnableWindowsTargeting=true
+          -o artifact
+          --no-build
+
+      - name: Rename binary to include version
+        run: mv artifact/OptiRoute.exe artifact/OptiRoute-${{ steps.version.outputs.version_pretty }}.exe
+
+      - name: Compute SHA256
+        run: |
+          cd artifact
+          sha256sum OptiRoute-*.exe | tee OptiRoute.exe.sha256
+
+      - name: Generate release notes from CHANGELOG.md
+        id: notes
+        run: |
+          # Extrai a seção entre "## [VERSION]" e a próxima "## ["
+          VERSION="${{ steps.version.outputs.version }}"
+          awk -v v="[$VERSION]" '
+            $0 ~ "^## " v { flag = 1; next }
+            flag && /^## \[/ { exit }
+            flag
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "WARNING: no CHANGELOG section found for $VERSION; using fallback" >&2
+            echo "Release $VERSION — see CHANGELOG.md for details." > release-notes.md
+          fi
+          cat release-notes.md
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OptiRoute-${{ steps.version.outputs.version_pretty }}-windows-x64
+          path: |
+            artifact/OptiRoute-*.exe
+            artifact/OptiRoute.exe.sha256
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ steps.version.outputs.version_pretty }}
+          body_path: release-notes.md
+          fail_on_unmatched_files: true
+          files: |
+            artifact/OptiRoute-*.exe
+            artifact/OptiRoute.exe.sha256
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-preview') }}
