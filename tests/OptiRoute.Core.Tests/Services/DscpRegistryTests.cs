@@ -41,6 +41,27 @@ public class DscpRegistryTests
         Assert.Equal(dscp1, dscp3);
     }
 
+    /// <summary>
+    /// Regressão: em execução no Linux, <c>Path.GetFileName</c> não reconhece
+    /// <c>\</c> como separador, então "C:\Games\BF6.exe" virava a string inteira
+    /// e o registry alocava um DSCP novo para a "outra" chave. O fix
+    /// normaliza separadores antes de extrair o file name.
+    /// </summary>
+    [Theory]
+    [InlineData("C:\\Games\\BF6.exe")]
+    [InlineData("C:/Games/BF6.exe")]
+    [InlineData("/usr/local/bin/bf6.exe")]
+    [InlineData("bf6.exe")]
+    public void AllocateNextAvailable_PathVariants_ShouldNormalizeToSameDscp(string exePath)
+    {
+        var registry = new DscpRegistry();
+
+        var dscpRef = registry.AllocateNextAvailable("bf6.exe");
+        var dscpVariant = registry.AllocateNextAvailable(exePath);
+
+        Assert.Equal(dscpRef, dscpVariant);
+    }
+
     [Fact]
     public void AllocateNextAvailable_DifferentExecutables_ShouldAllocateDifferentDscps()
     {
